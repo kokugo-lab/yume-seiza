@@ -393,7 +393,6 @@ ol.fr li{margin-bottom:6px}
   <button class="btn" id="recenter" style="display:none">正面に直す</button>
   <button class="btn" id="mebtn">名前を入れる</button>
   <button class="btn" id="spk">🔇</button>
-  <button class="btn" id="postbtn">夜空へ送る</button>
   <div id="counter"></div>
   <div id="modes">
     <button data-f="all" class="on">すべて</button>
@@ -414,7 +413,7 @@ ol.fr li{margin-bottom:6px}
   <div id="mine"></div>
   <div id="days"></div>
   <div id="qban"></div>
-  <div id="purpose"><p class="pq">ほかの人は、どう読んだ？</p><p class="ps">自分とはちがう読みにも、出会いにいこう。</p><p class="st"><span>① 書く</span><span class="on">② 見る</span><span>③ 書き直す</span></p></div>
+  <div id="purpose"><p class="pq">ほかの人は、どう読んだ？</p><p class="ps">自分とはちがう読みにも、出会いにいこう。</p><p class="st"><span>① 書く</span><span class="on">② 見る</span><span>③ 新たな考え</span></p></div>
   <div id="lookup"><span class="ar">︿</span><span id="lookupt">空を見上げてみよう</span></div>
   <div id="qwrap"><div id="qtog"><button data-q="q1" class="on">問一の空</button><button data-q="q2">問二の空</button></div><button id="qbar">問題文</button><div id="qcard"></div></div>
   <div id="mission"></div>
@@ -428,7 +427,7 @@ ol.fr li{margin-bottom:6px}
 </div>
 <div id="namebox"><div class="w">
  <b>あなたは だれ？</b>
- <p>フォームで選んだクラスと出席番号を選ぶと、あなたの言葉の星が金色に光ります。</p>
+ <p>フォームで選んだクラスと出席番号を選ぶと、あなたの言葉の星が金色に光ります。番号は、ほかの人には表示されません。</p>
  <select id="namecls"></select>
  <select id="nameno"></select>
  <div class="row"><button id="namelater">あとで</button><button id="nameok" class="y">決める</button></div>
@@ -512,14 +511,12 @@ ol.fr li{margin-bottom:6px}
   <p class="h1">夢十夜　第一夜</p>
   <p class="au">夏目漱石</p>
   <p class="purpose">ほかの人は、どう読んだ？</p>
-  <p class="steps"><span>① 書く</span><span>② 見る</span><span>③ 書き直す</span></p>
+  <p class="steps"><span>① 書く</span><span>② 見る</span><span>③ 新たな考え</span></p>
   <p class="lead">クラス全員が問一・問二に書いた言葉が、ひとつずつ星になって夜空にのぼります。<br>
     よく使われた言葉ほど<b>大きく光り</b>、同じ文の中で一緒に使われた言葉どうしが<b>線で結ばれ</b>（多くの人が使うほど太く）、線をタップするとその文が読めます。<br>
     誰も使わなかった言葉は、ひとりで光る<b>孤星</b>になります。<br>
     端末を持ったまま体の向きを変えると、空を見回せます。</p>
-  <button class="go b" id="goPost">夜空へ送る（問一・問二を打ちこむ）</button>
   <button class="go a" id="goSky">夜空を見上げる</button>
-  <button class="go c" id="goImp">クラス分を取りこむ（先生用）</button>
   <p class="hint">※ iPhone・iPad では、はじめに「センサーの使用」を許可してください。<br>
     傾きが使えない端末では、画面を指でなぞって見回せます。</p>
   <p class="hint" id="tfeed"></p>
@@ -627,6 +624,10 @@ function mkTex(draw,s){const cv=document.createElement('canvas');cv.width=cv.hei
 const STAR_TEX=mkTex((g,s)=>{const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
   r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.22,'rgba(255,250,232,.95)');
   r.addColorStop(.5,'rgba(220,200,150,.30)');r.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=r;g.fillRect(0,0,s,s);},64);
+const WSTAR_TEX=mkTex((g,s)=>{const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.1,'rgba(255,252,240,.95)');
+  r.addColorStop(.22,'rgba(235,225,200,.32)');r.addColorStop(.5,'rgba(200,190,170,.08)');r.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle=r;g.fillRect(0,0,s,s);},64);
 const DOT_TEX=mkTex((g,s)=>{const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
   r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.45,'rgba(200,215,255,.5)');
@@ -753,7 +754,220 @@ const STOP=new Set(['いる','ある','する','なる','いう','こと','も�
  'から','ので','けど','しかし','また','でも','ます','です','だと','ない','なく','たい','れる','られ','てい','という','ている',
  'とい','ては','には','では','ても','ながら','ように','ことが','ことを','思う','思っ','考え','感じ','自分が','とても',
  'かも','だけ','まで','より','ほど','など','そして','だから','つまり','やはり','たぶん','きっと','本当','すごく','少し']);
-const WHITE=new Set(['女','男','愛','夢','星','花','心','死','魂','時','月','日','赤','白','恋','涙','空','露','疑','待','嘘','光','闇','墓','石','土','骨','声','目','顔','血','雲']);
+// TinySegmenter 0.1 -- Super compact Japanese tokenizer in Javascript
+// (c) 2008 Taku Kudo <taku@chasen.org>
+// TinySegmenter is freely distributable under the terms of a new BSD licence.
+// For details, see http://chasen.org/~taku/software/TinySegmenter/LICENCE.txt
+
+function TinySegmenter() {
+    var patterns = {
+        "[一二三四五六七八九十百千万億兆]":"M",
+        "[一-龠々〆ヵヶ]":"H",
+        "[ぁ-ん]":"I",
+        "[ァ-ヴーｱ-ﾝﾞｰ]":"K",
+        "[a-zA-Zａ-ｚＡ-Ｚ]":"A",
+        "[0-9０-９]":"N"
+    }
+    this.chartype_ = [];
+    for (var i in patterns) {
+        var regexp = new RegExp;
+        regexp.compile(i)
+        this.chartype_.push([regexp, patterns[i]]);
+    }
+
+    this.BIAS__ = -332
+    this.BC1__ = {"HH":6,"II":2461,"KH":406,"OH":-1378};
+    this.BC2__ = {"AA":-3267,"AI":2744,"AN":-878,"HH":-4070,"HM":-1711,"HN":4012,"HO":3761,"IA":1327,"IH":-1184,"II":-1332,"IK":1721,"IO":5492,"KI":3831,"KK":-8741,"MH":-3132,"MK":3334,"OO":-2920};
+    this.BC3__ = {"HH":996,"HI":626,"HK":-721,"HN":-1307,"HO":-836,"IH":-301,"KK":2762,"MK":1079,"MM":4034,"OA":-1652,"OH":266};
+    this.BP1__ = {"BB":295,"OB":304,"OO":-125,"UB":352};
+    this.BP2__ = {"BO":60,"OO":-1762};
+    this.BQ1__ = {"BHH":1150,"BHM":1521,"BII":-1158,"BIM":886,"BMH":1208,"BNH":449,"BOH":-91,"BOO":-2597,"OHI":451,"OIH":-296,"OKA":1851,"OKH":-1020,"OKK":904,"OOO":2965};
+    this.BQ2__ = {"BHH":118,"BHI":-1159,"BHM":466,"BIH":-919,"BKK":-1720,"BKO":864,"OHH":-1139,"OHM":-181,"OIH":153,"UHI":-1146};
+    this.BQ3__ = {"BHH":-792,"BHI":2664,"BII":-299,"BKI":419,"BMH":937,"BMM":8335,"BNN":998,"BOH":775,"OHH":2174,"OHM":439,"OII":280,"OKH":1798,"OKI":-793,"OKO":-2242,"OMH":-2402,"OOO":11699};
+    this.BQ4__ = {"BHH":-3895,"BIH":3761,"BII":-4654,"BIK":1348,"BKK":-1806,"BMI":-3385,"BOO":-12396,"OAH":926,"OHH":266,"OHK":-2036,"ONN":-973};
+    this.BW1__ = {",と":660,",同":727,"B1あ":1404,"B1同":542,"、と":660,"、同":727,"」と":1682,"あっ":1505,"いう":1743,"いっ":-2055,"いる":672,"うし":-4817,"うん":665,"から":3472,"がら":600,"こう":-790,"こと":2083,"こん":-1262,"さら":-4143,"さん":4573,"した":2641,"して":1104,"すで":-3399,"そこ":1977,"それ":-871,"たち":1122,"ため":601,"った":3463,"つい":-802,"てい":805,"てき":1249,"でき":1127,"です":3445,"では":844,"とい":-4915,"とみ":1922,"どこ":3887,"ない":5713,"なっ":3015,"など":7379,"なん":-1113,"にし":2468,"には":1498,"にも":1671,"に対":-912,"の一":-501,"の中":741,"ませ":2448,"まで":1711,"まま":2600,"まる":-2155,"やむ":-1947,"よっ":-2565,"れた":2369,"れで":-913,"をし":1860,"を見":731,"亡く":-1886,"京都":2558,"取り":-2784,"大き":-2604,"大阪":1497,"平方":-2314,"引き":-1336,"日本":-195,"本当":-2423,"毎日":-2113,"目指":-724,"Ｂ１あ":1404,"Ｂ１同":542,"｣と":1682};
+    this.BW2__ = {"..":-11822,"11":-669,"――":-5730,"−−":-13175,"いう":-1609,"うか":2490,"かし":-1350,"かも":-602,"から":-7194,"かれ":4612,"がい":853,"がら":-3198,"きた":1941,"くな":-1597,"こと":-8392,"この":-4193,"させ":4533,"され":13168,"さん":-3977,"しい":-1819,"しか":-545,"した":5078,"して":972,"しな":939,"その":-3744,"たい":-1253,"たた":-662,"ただ":-3857,"たち":-786,"たと":1224,"たは":-939,"った":4589,"って":1647,"っと":-2094,"てい":6144,"てき":3640,"てく":2551,"ては":-3110,"ても":-3065,"でい":2666,"でき":-1528,"でし":-3828,"です":-4761,"でも":-4203,"とい":1890,"とこ":-1746,"とと":-2279,"との":720,"とみ":5168,"とも":-3941,"ない":-2488,"なが":-1313,"など":-6509,"なの":2614,"なん":3099,"にお":-1615,"にし":2748,"にな":2454,"によ":-7236,"に対":-14943,"に従":-4688,"に関":-11388,"のか":2093,"ので":-7059,"のに":-6041,"のの":-6125,"はい":1073,"はが":-1033,"はず":-2532,"ばれ":1813,"まし":-1316,"まで":-6621,"まれ":5409,"めて":-3153,"もい":2230,"もの":-10713,"らか":-944,"らし":-1611,"らに":-1897,"りし":651,"りま":1620,"れた":4270,"れて":849,"れば":4114,"ろう":6067,"われ":7901,"を通":-11877,"んだ":728,"んな":-4115,"一人":602,"一方":-1375,"一日":970,"一部":-1051,"上が":-4479,"会社":-1116,"出て":2163,"分の":-7758,"同党":970,"同日":-913,"大阪":-2471,"委員":-1250,"少な":-1050,"年度":-8669,"年間":-1626,"府県":-2363,"手権":-1982,"新聞":-4066,"日新":-722,"日本":-7068,"日米":3372,"曜日":-601,"朝鮮":-2355,"本人":-2697,"東京":-1543,"然と":-1384,"社会":-1276,"立て":-990,"第に":-1612,"米国":-4268,"１１":-669};
+    this.BW3__ = {"あた":-2194,"あり":719,"ある":3846,"い.":-1185,"い。":-1185,"いい":5308,"いえ":2079,"いく":3029,"いた":2056,"いっ":1883,"いる":5600,"いわ":1527,"うち":1117,"うと":4798,"えと":1454,"か.":2857,"か。":2857,"かけ":-743,"かっ":-4098,"かに":-669,"から":6520,"かり":-2670,"が,":1816,"が、":1816,"がき":-4855,"がけ":-1127,"がっ":-913,"がら":-4977,"がり":-2064,"きた":1645,"けど":1374,"こと":7397,"この":1542,"ころ":-2757,"さい":-714,"さを":976,"し,":1557,"し、":1557,"しい":-3714,"した":3562,"して":1449,"しな":2608,"しま":1200,"す.":-1310,"す。":-1310,"する":6521,"ず,":3426,"ず、":3426,"ずに":841,"そう":428,"た.":8875,"た。":8875,"たい":-594,"たの":812,"たり":-1183,"たる":-853,"だ.":4098,"だ。":4098,"だっ":1004,"った":-4748,"って":300,"てい":6240,"てお":855,"ても":302,"です":1437,"でに":-1482,"では":2295,"とう":-1387,"とし":2266,"との":541,"とも":-3543,"どう":4664,"ない":1796,"なく":-903,"など":2135,"に,":-1021,"に、":-1021,"にし":1771,"にな":1906,"には":2644,"の,":-724,"の、":-724,"の子":-1000,"は,":1337,"は、":1337,"べき":2181,"まし":1113,"ます":6943,"まっ":-1549,"まで":6154,"まれ":-793,"らし":1479,"られ":6820,"るる":3818,"れ,":854,"れ、":854,"れた":1850,"れて":1375,"れば":-3246,"れる":1091,"われ":-605,"んだ":606,"んで":798,"カ月":990,"会議":860,"入り":1232,"大会":2217,"始め":1681,"市":965,"新聞":-5055,"日,":974,"日、":974,"社会":2024,"ｶ月":990};
+    this.TC1__ = {"AAA":1093,"HHH":1029,"HHM":580,"HII":998,"HOH":-390,"HOM":-331,"IHI":1169,"IOH":-142,"IOI":-1015,"IOM":467,"MMH":187,"OOI":-1832};
+    this.TC2__ = {"HHO":2088,"HII":-1023,"HMM":-1154,"IHI":-1965,"KKH":703,"OII":-2649};
+    this.TC3__ = {"AAA":-294,"HHH":346,"HHI":-341,"HII":-1088,"HIK":731,"HOH":-1486,"IHH":128,"IHI":-3041,"IHO":-1935,"IIH":-825,"IIM":-1035,"IOI":-542,"KHH":-1216,"KKA":491,"KKH":-1217,"KOK":-1009,"MHH":-2694,"MHM":-457,"MHO":123,"MMH":-471,"NNH":-1689,"NNO":662,"OHO":-3393};
+    this.TC4__ = {"HHH":-203,"HHI":1344,"HHK":365,"HHM":-122,"HHN":182,"HHO":669,"HIH":804,"HII":679,"HOH":446,"IHH":695,"IHO":-2324,"IIH":321,"III":1497,"IIO":656,"IOO":54,"KAK":4845,"KKA":3386,"KKK":3065,"MHH":-405,"MHI":201,"MMH":-241,"MMM":661,"MOM":841};
+    this.TQ1__ = {"BHHH":-227,"BHHI":316,"BHIH":-132,"BIHH":60,"BIII":1595,"BNHH":-744,"BOHH":225,"BOOO":-908,"OAKK":482,"OHHH":281,"OHIH":249,"OIHI":200,"OIIH":-68};
+    this.TQ2__ = {"BIHH":-1401,"BIII":-1033,"BKAK":-543,"BOOO":-5591};
+    this.TQ3__ = {"BHHH":478,"BHHM":-1073,"BHIH":222,"BHII":-504,"BIIH":-116,"BIII":-105,"BMHI":-863,"BMHM":-464,"BOMH":620,"OHHH":346,"OHHI":1729,"OHII":997,"OHMH":481,"OIHH":623,"OIIH":1344,"OKAK":2792,"OKHH":587,"OKKA":679,"OOHH":110,"OOII":-685};
+    this.TQ4__ = {"BHHH":-721,"BHHM":-3604,"BHII":-966,"BIIH":-607,"BIII":-2181,"OAAA":-2763,"OAKK":180,"OHHH":-294,"OHHI":2446,"OHHO":480,"OHIH":-1573,"OIHH":1935,"OIHI":-493,"OIIH":626,"OIII":-4007,"OKAK":-8156};
+    this.TW1__ = {"につい":-4681,"東京都":2026};
+    this.TW2__ = {"ある程":-2049,"いった":-1256,"ころが":-2434,"しょう":3873,"その後":-4430,"だって":-1049,"ていた":1833,"として":-4657,"ともに":-4517,"もので":1882,"一気に":-792,"初めて":-1512,"同時に":-8097,"大きな":-1255,"対して":-2721,"社会党":-3216};
+    this.TW3__ = {"いただ":-1734,"してい":1314,"として":-4314,"につい":-5483,"にとっ":-5989,"に当た":-6247,"ので,":-727,"ので、":-727,"のもの":-600,"れから":-3752,"十二月":-2287};
+    this.TW4__ = {"いう.":8576,"いう。":8576,"からな":-2348,"してい":2958,"たが,":1516,"たが、":1516,"ている":1538,"という":1349,"ました":5543,"ません":1097,"ようと":-4258,"よると":5865};
+    this.UC1__ = {"A":484,"K":93,"M":645,"O":-505};
+    this.UC2__ = {"A":819,"H":1059,"I":409,"M":3987,"N":5775,"O":646};
+    this.UC3__ = {"A":-1370,"I":2311};
+    this.UC4__ = {"A":-2643,"H":1809,"I":-1032,"K":-3450,"M":3565,"N":3876,"O":6646};
+    this.UC5__ = {"H":313,"I":-1238,"K":-799,"M":539,"O":-831};
+    this.UC6__ = {"H":-506,"I":-253,"K":87,"M":247,"O":-387};
+    this.UP1__ = {"O":-214};
+    this.UP2__ = {"B":69,"O":935};
+    this.UP3__ = {"B":189};
+    this.UQ1__ = {"BH":21,"BI":-12,"BK":-99,"BN":142,"BO":-56,"OH":-95,"OI":477,"OK":410,"OO":-2422};
+    this.UQ2__ = {"BH":216,"BI":113,"OK":1759};
+    this.UQ3__ = {"BA":-479,"BH":42,"BI":1913,"BK":-7198,"BM":3160,"BN":6427,"BO":14761,"OI":-827,"ON":-3212};
+    this.UW1__ = {",":156,"、":156,"「":-463,"あ":-941,"う":-127,"が":-553,"き":121,"こ":505,"で":-201,"と":-547,"ど":-123,"に":-789,"の":-185,"は":-847,"も":-466,"や":-470,"よ":182,"ら":-292,"り":208,"れ":169,"を":-446,"ん":-137,"・":-135,"主":-402,"京":-268,"区":-912,"午":871,"国":-460,"大":561,"委":729,"市":-411,"日":-141,"理":361,"生":-408,"県":-386,"都":-718,"｢":-463,"･":-135};
+    this.UW2__ = {",":-829,"、":-829,"〇":892,"「":-645,"」":3145,"あ":-538,"い":505,"う":134,"お":-502,"か":1454,"が":-856,"く":-412,"こ":1141,"さ":878,"ざ":540,"し":1529,"す":-675,"せ":300,"そ":-1011,"た":188,"だ":1837,"つ":-949,"て":-291,"で":-268,"と":-981,"ど":1273,"な":1063,"に":-1764,"の":130,"は":-409,"ひ":-1273,"べ":1261,"ま":600,"も":-1263,"や":-402,"よ":1639,"り":-579,"る":-694,"れ":571,"を":-2516,"ん":2095,"ア":-587,"カ":306,"キ":568,"ッ":831,"三":-758,"不":-2150,"世":-302,"中":-968,"主":-861,"事":492,"人":-123,"会":978,"保":362,"入":548,"初":-3025,"副":-1566,"北":-3414,"区":-422,"大":-1769,"天":-865,"太":-483,"子":-1519,"学":760,"実":1023,"小":-2009,"市":-813,"年":-1060,"強":1067,"手":-1519,"揺":-1033,"政":1522,"文":-1355,"新":-1682,"日":-1815,"明":-1462,"最":-630,"朝":-1843,"本":-1650,"東":-931,"果":-665,"次":-2378,"民":-180,"気":-1740,"理":752,"発":529,"目":-1584,"相":-242,"県":-1165,"立":-763,"第":810,"米":509,"自":-1353,"行":838,"西":-744,"見":-3874,"調":1010,"議":1198,"込":3041,"開":1758,"間":-1257,"｢":-645,"｣":3145,"ｯ":831,"ｱ":-587,"ｶ":306,"ｷ":568};
+    this.UW3__ = {",":4889,"1":-800,"−":-1723,"、":4889,"々":-2311,"〇":5827,"」":2670,"〓":-3573,"あ":-2696,"い":1006,"う":2342,"え":1983,"お":-4864,"か":-1163,"が":3271,"く":1004,"け":388,"げ":401,"こ":-3552,"ご":-3116,"さ":-1058,"し":-395,"す":584,"せ":3685,"そ":-5228,"た":842,"ち":-521,"っ":-1444,"つ":-1081,"て":6167,"で":2318,"と":1691,"ど":-899,"な":-2788,"に":2745,"の":4056,"は":4555,"ひ":-2171,"ふ":-1798,"へ":1199,"ほ":-5516,"ま":-4384,"み":-120,"め":1205,"も":2323,"や":-788,"よ":-202,"ら":727,"り":649,"る":5905,"れ":2773,"わ":-1207,"を":6620,"ん":-518,"ア":551,"グ":1319,"ス":874,"ッ":-1350,"ト":521,"ム":1109,"ル":1591,"ロ":2201,"ン":278,"・":-3794,"一":-1619,"下":-1759,"世":-2087,"両":3815,"中":653,"主":-758,"予":-1193,"二":974,"人":2742,"今":792,"他":1889,"以":-1368,"低":811,"何":4265,"作":-361,"保":-2439,"元":4858,"党":3593,"全":1574,"公":-3030,"六":755,"共":-1880,"円":5807,"再":3095,"分":457,"初":2475,"別":1129,"前":2286,"副":4437,"力":365,"動":-949,"務":-1872,"化":1327,"北":-1038,"区":4646,"千":-2309,"午":-783,"協":-1006,"口":483,"右":1233,"各":3588,"合":-241,"同":3906,"和":-837,"員":4513,"国":642,"型":1389,"場":1219,"外":-241,"妻":2016,"学":-1356,"安":-423,"実":-1008,"家":1078,"小":-513,"少":-3102,"州":1155,"市":3197,"平":-1804,"年":2416,"広":-1030,"府":1605,"度":1452,"建":-2352,"当":-3885,"得":1905,"思":-1291,"性":1822,"戸":-488,"指":-3973,"政":-2013,"教":-1479,"数":3222,"文":-1489,"新":1764,"日":2099,"旧":5792,"昨":-661,"時":-1248,"曜":-951,"最":-937,"月":4125,"期":360,"李":3094,"村":364,"東":-805,"核":5156,"森":2438,"業":484,"氏":2613,"民":-1694,"決":-1073,"法":1868,"海":-495,"無":979,"物":461,"特":-3850,"生":-273,"用":914,"町":1215,"的":7313,"直":-1835,"省":792,"県":6293,"知":-1528,"私":4231,"税":401,"立":-960,"第":1201,"米":7767,"系":3066,"約":3663,"級":1384,"統":-4229,"総":1163,"線":1255,"者":6457,"能":725,"自":-2869,"英":785,"見":1044,"調":-562,"財":-733,"費":1777,"車":1835,"軍":1375,"込":-1504,"通":-1136,"選":-681,"郎":1026,"郡":4404,"部":1200,"金":2163,"長":421,"開":-1432,"間":1302,"関":-1282,"雨":2009,"電":-1045,"非":2066,"駅":1620,"１":-800,"｣":2670,"･":-3794,"ｯ":-1350,"ｱ":551,"ｸﾞ":1319,"ｽ":874,"ﾄ":521,"ﾑ":1109,"ﾙ":1591,"ﾛ":2201,"ﾝ":278};
+    this.UW4__ = {",":3930,".":3508,"―":-4841,"、":3930,"。":3508,"〇":4999,"「":1895,"」":3798,"〓":-5156,"あ":4752,"い":-3435,"う":-640,"え":-2514,"お":2405,"か":530,"が":6006,"き":-4482,"ぎ":-3821,"く":-3788,"け":-4376,"げ":-4734,"こ":2255,"ご":1979,"さ":2864,"し":-843,"じ":-2506,"す":-731,"ず":1251,"せ":181,"そ":4091,"た":5034,"だ":5408,"ち":-3654,"っ":-5882,"つ":-1659,"て":3994,"で":7410,"と":4547,"な":5433,"に":6499,"ぬ":1853,"ね":1413,"の":7396,"は":8578,"ば":1940,"ひ":4249,"び":-4134,"ふ":1345,"へ":6665,"べ":-744,"ほ":1464,"ま":1051,"み":-2082,"む":-882,"め":-5046,"も":4169,"ゃ":-2666,"や":2795,"ょ":-1544,"よ":3351,"ら":-2922,"り":-9726,"る":-14896,"れ":-2613,"ろ":-4570,"わ":-1783,"を":13150,"ん":-2352,"カ":2145,"コ":1789,"セ":1287,"ッ":-724,"ト":-403,"メ":-1635,"ラ":-881,"リ":-541,"ル":-856,"ン":-3637,"・":-4371,"ー":-11870,"一":-2069,"中":2210,"予":782,"事":-190,"井":-1768,"人":1036,"以":544,"会":950,"体":-1286,"作":530,"側":4292,"先":601,"党":-2006,"共":-1212,"内":584,"円":788,"初":1347,"前":1623,"副":3879,"力":-302,"動":-740,"務":-2715,"化":776,"区":4517,"協":1013,"参":1555,"合":-1834,"和":-681,"員":-910,"器":-851,"回":1500,"国":-619,"園":-1200,"地":866,"場":-1410,"塁":-2094,"士":-1413,"多":1067,"大":571,"子":-4802,"学":-1397,"定":-1057,"寺":-809,"小":1910,"屋":-1328,"山":-1500,"島":-2056,"川":-2667,"市":2771,"年":374,"庁":-4556,"後":456,"性":553,"感":916,"所":-1566,"支":856,"改":787,"政":2182,"教":704,"文":522,"方":-856,"日":1798,"時":1829,"最":845,"月":-9066,"木":-485,"来":-442,"校":-360,"業":-1043,"氏":5388,"民":-2716,"気":-910,"沢":-939,"済":-543,"物":-735,"率":672,"球":-1267,"生":-1286,"産":-1101,"田":-2900,"町":1826,"的":2586,"目":922,"省":-3485,"県":2997,"空":-867,"立":-2112,"第":788,"米":2937,"系":786,"約":2171,"経":1146,"統":-1169,"総":940,"線":-994,"署":749,"者":2145,"能":-730,"般":-852,"行":-792,"規":792,"警":-1184,"議":-244,"谷":-1000,"賞":730,"車":-1481,"軍":1158,"輪":-1433,"込":-3370,"近":929,"道":-1291,"選":2596,"郎":-4866,"都":1192,"野":-1100,"銀":-2213,"長":357,"間":-2344,"院":-2297,"際":-2604,"電":-878,"領":-1659,"題":-792,"館":-1984,"首":1749,"高":2120,"｢":1895,"｣":3798,"･":-4371,"ｯ":-724,"ｰ":-11870,"ｶ":2145,"ｺ":1789,"ｾ":1287,"ﾄ":-403,"ﾒ":-1635,"ﾗ":-881,"ﾘ":-541,"ﾙ":-856,"ﾝ":-3637};
+    this.UW5__ = {",":465,".":-299,"1":-514,"E2":-32768,"]":-2762,"、":465,"。":-299,"「":363,"あ":1655,"い":331,"う":-503,"え":1199,"お":527,"か":647,"が":-421,"き":1624,"ぎ":1971,"く":312,"げ":-983,"さ":-1537,"し":-1371,"す":-852,"だ":-1186,"ち":1093,"っ":52,"つ":921,"て":-18,"で":-850,"と":-127,"ど":1682,"な":-787,"に":-1224,"の":-635,"は":-578,"べ":1001,"み":502,"め":865,"ゃ":3350,"ょ":854,"り":-208,"る":429,"れ":504,"わ":419,"を":-1264,"ん":327,"イ":241,"ル":451,"ン":-343,"中":-871,"京":722,"会":-1153,"党":-654,"務":3519,"区":-901,"告":848,"員":2104,"大":-1296,"学":-548,"定":1785,"嵐":-1304,"市":-2991,"席":921,"年":1763,"思":872,"所":-814,"挙":1618,"新":-1682,"日":218,"月":-4353,"査":932,"格":1356,"機":-1508,"氏":-1347,"田":240,"町":-3912,"的":-3149,"相":1319,"省":-1052,"県":-4003,"研":-997,"社":-278,"空":-813,"統":1955,"者":-2233,"表":663,"語":-1073,"議":1219,"選":-1018,"郎":-368,"長":786,"間":1191,"題":2368,"館":-689,"１":-514,"Ｅ２":-32768,"｢":363,"ｲ":241,"ﾙ":451,"ﾝ":-343};
+    this.UW6__ = {",":227,".":808,"1":-270,"E1":306,"、":227,"。":808,"あ":-307,"う":189,"か":241,"が":-73,"く":-121,"こ":-200,"じ":1782,"す":383,"た":-428,"っ":573,"て":-1014,"で":101,"と":-105,"な":-253,"に":-149,"の":-417,"は":-236,"も":-206,"り":187,"る":-135,"を":195,"ル":-673,"ン":-496,"一":-277,"中":201,"件":-800,"会":624,"前":302,"区":1792,"員":-1212,"委":798,"学":-960,"市":887,"広":-695,"後":535,"業":-697,"相":753,"社":-507,"福":974,"空":-822,"者":1811,"連":463,"郎":1082,"１":-270,"Ｅ１":306,"ﾙ":-673,"ﾝ":-496};
+
+    return this;
+}
+
+TinySegmenter.prototype.ctype_ = function(str) {
+    for (var i in this.chartype_) {
+        if (str.match(this.chartype_[i][0])) {
+            return this.chartype_[i][1];
+        }
+    }
+    return "O";
+}
+
+TinySegmenter.prototype.ts_ = function(v) {
+    if (v) { return v; }
+    return 0;
+}
+
+TinySegmenter.prototype.segment = function(input) {
+    if (input == null || input == undefined || input == "") {
+        return [];
+    }
+    var result = [];
+    var seg = ["B3","B2","B1"];
+    var ctype = ["O","O","O"];
+    var o = input.split("");
+    for (i = 0; i < o.length; ++i) {
+        seg.push(o[i]);
+        ctype.push(this.ctype_(o[i]))
+    }
+    seg.push("E1");
+    seg.push("E2");
+    seg.push("E3");
+    ctype.push("O");
+    ctype.push("O");
+    ctype.push("O");
+    var word = seg[3];
+    var p1 = "U";
+    var p2 = "U";
+    var p3 = "U";
+    for (var i = 4; i < seg.length - 3; ++i) {
+        var score = this.BIAS__;
+        var w1 = seg[i-3];
+        var w2 = seg[i-2];
+        var w3 = seg[i-1];
+        var w4 = seg[i];
+        var w5 = seg[i+1];
+        var w6 = seg[i+2];
+        var c1 = ctype[i-3];
+        var c2 = ctype[i-2];
+        var c3 = ctype[i-1];
+        var c4 = ctype[i];
+        var c5 = ctype[i+1];
+        var c6 = ctype[i+2];
+        score += this.ts_(this.UP1__[p1]);
+        score += this.ts_(this.UP2__[p2]);
+        score += this.ts_(this.UP3__[p3]);
+        score += this.ts_(this.BP1__[p1 + p2]);
+        score += this.ts_(this.BP2__[p2 + p3]);
+        score += this.ts_(this.UW1__[w1]);
+        score += this.ts_(this.UW2__[w2]);
+        score += this.ts_(this.UW3__[w3]);
+        score += this.ts_(this.UW4__[w4]);
+        score += this.ts_(this.UW5__[w5]);
+        score += this.ts_(this.UW6__[w6]);
+        score += this.ts_(this.BW1__[w2 + w3]);
+        score += this.ts_(this.BW2__[w3 + w4]);
+        score += this.ts_(this.BW3__[w4 + w5]);
+        score += this.ts_(this.TW1__[w1 + w2 + w3]);
+        score += this.ts_(this.TW2__[w2 + w3 + w4]);
+        score += this.ts_(this.TW3__[w3 + w4 + w5]);
+        score += this.ts_(this.TW4__[w4 + w5 + w6]);
+        score += this.ts_(this.UC1__[c1]);
+        score += this.ts_(this.UC2__[c2]);
+        score += this.ts_(this.UC3__[c3]);
+        score += this.ts_(this.UC4__[c4]);
+        score += this.ts_(this.UC5__[c5]);
+        score += this.ts_(this.UC6__[c6]);
+        score += this.ts_(this.BC1__[c2 + c3]);
+        score += this.ts_(this.BC2__[c3 + c4]);
+        score += this.ts_(this.BC3__[c4 + c5]);
+        score += this.ts_(this.TC1__[c1 + c2 + c3]);
+        score += this.ts_(this.TC2__[c2 + c3 + c4]);
+        score += this.ts_(this.TC3__[c3 + c4 + c5]);
+        score += this.ts_(this.TC4__[c4 + c5 + c6]);
+//  score += this.ts_(this.TC5__[c4 + c5 + c6]);
+        score += this.ts_(this.UQ1__[p1 + c1]);
+        score += this.ts_(this.UQ2__[p2 + c2]);
+        score += this.ts_(this.UQ3__[p3 + c3]);
+        score += this.ts_(this.BQ1__[p2 + c2 + c3]);
+        score += this.ts_(this.BQ2__[p2 + c3 + c4]);
+        score += this.ts_(this.BQ3__[p3 + c2 + c3]);
+        score += this.ts_(this.BQ4__[p3 + c3 + c4]);
+        score += this.ts_(this.TQ1__[p2 + c1 + c2 + c3]);
+        score += this.ts_(this.TQ2__[p2 + c2 + c3 + c4]);
+        score += this.ts_(this.TQ3__[p3 + c1 + c2 + c3]);
+        score += this.ts_(this.TQ4__[p3 + c2 + c3 + c4]);
+        var p = "O";
+        if (score > 0) {
+            result.push(word);
+            word = "";
+            p = "B";
+        }
+        p1 = p2;
+        p2 = p3;
+        p3 = p;
+        word += seg[i];
+    }
+    result.push(word);
+
+    return result;
+}
+/* ── ひらがなの言葉（「えぐい」「さびしい」など）も星にする ──
+   TinySegmenter で文を区切り、ひらがなだけの形容詞らしい語（〜い）を拾う。
+   「えぐかった」→「えぐい」、「こわく」→「こわい」のように元の形にそろえる。 */
+let _TS=null;
+function tsSeg(s){try{_TS=_TS||new TinySegmenter();return _TS.segment(s);}catch(e){return [];}}
+const HSTOP=new Set(['ない','たい','らしい','みたい','ほしい','よい','いい','くらい','ぐらい','すごい','おおい','ちいさい','おおきい',
+ 'ながい','ちかい','かわい','おもい','おおい','とおい','はやい','おそい','あたらしい','ふるい','しない','いない','こない','いたい','したい','なりたい','ありがたい','かわいい']);
+const LEADP=/^[がをにはもとでのへやかね]/;
+/* よく使われる、ひらがなの気持ちのことば（活用した形も見つける） */
+const HDICT=['えぐい','やばい','つらい','さびしい','さみしい','かなしい','こわい','くるしい','せつない','はかない','きれい','うつくしい',
+ 'いとしい','むなしい','うれしい','たのしい','おそろしい','あやしい','やさしい','くやしい','もどかしい','もったいない','なつかしい',
+ 'まぶしい','しんどい','だるい','ずるい','あわれ','いたましい','ねたましい','うらめしい','やるせない','なさけない','たまらない',
+ 'みじめ','けなげ','いじらしい','おもい','かるい','あまい','にがい','ひどい','むごい','きもい','うざい','すごい','えもい','あつい','つめたい','あかるい'];
+function hiraWords(sn){
+ const out=new Set(),txt=sn||'';
+ const runs=[];let m;const re=/[ぁ-ゖー]{2,}/g;
+ while((m=re.exec(txt)))runs.push({r:m[0],after:m.index>0?txt[m.index-1]:''});
+ runs.forEach(o=>{
+  /* 1) 辞書のことば：語幹のあとに い・く・かっ・さ・そう・げ・すぎ が続けば、その言葉 */
+  let hit=false;
+  HDICT.forEach(w=>{
+   const st=/い$/.test(w)&&w.length>2?w.slice(0,-1):w;
+   const i=o.r.indexOf(st);if(i<0)return;
+   const rest=o.r.slice(i+st.length);
+   if(st===w||/^(い|く|かっ|かろ|けれ|さ|そう|げ|すぎ|な)/.test(rest)){out.add(w);hit=true;}});
+  /* 2) 文のはじめや読点のあとのひらがなは、区切って「〜い」の形の言葉を拾う */
+  if(!hit&&!/[一-龥々ァ-ヴ]/.test(o.after)){
+   const ts=tsSeg(o.r);
+   ts.forEach(t=>{let w=t;
+    if(!/^[ぁ-ゖー]+$/.test(w))return;
+    if(w.length>=4&&LEADP.test(w))w=w.slice(1);
+    w=w.replace(/(けど|から|ので|のに|し)$/,'');
+    if(w.length<3||w.length>7||!/い$/.test(w)||HSTOP.has(w)||STOP.has(w))return;
+    out.add(w);});}});
+ return [...out];}
+
+const WHITE=new Set(['女','男','愛','夢','星','花','心','死','魂','時','月','日','赤','白','恋','涙','空','露','疑','待','嘘','光','闇','墓','石','土','骨','声','目','顔','血','雲',
+ '信','悲','怖','欺','逢','寂','哀','憎','恨','苦','辛','痛','傷','罪','罰','願','祈','誓','幸','謎','影','夜','朝','暁','命','生','永','眠','貝','茎','唇','瞳','匂','香','雨','風','天','神','縁','絆','美','黒','青','紅','約','孤','虚','無']);
 const NG=new Set(['自分','思っ','思い','考え','感じ','本当','場面','部分','言葉','表現','以上','一番','最後','最初']);
 function tokenize(s){
  if(!s)return [];
@@ -764,15 +978,17 @@ function tokenize(s){
   if(w.length===1&&!WHITE.has(w))continue;
   if(STOP.has(w)||NG.has(w))continue;
   out.push(w);}
+ hiraWords(s).forEach(w=>out.push(w));
  return out;}
 function sentences(s){return (s||'').split(/[。．\n]/).map(t=>t.trim()).filter(Boolean);}
 function wordsOf(txt){const st=new Set();sentences(txt).forEach(sn=>tokenize(sn).forEach(w=>st.add(w)));return st;}
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ══ 回答・星座の保存 ══ */
-const LS='yume_posts_v1',LC='yume_consts_v1',LN='yume_name_v1',LF='yume_feed_v1';
+const LS='yume_posts_v2',LC='yume_consts_v1',LN='yume_name_v1',LF='yume_feed_v1';
 function loadJ(k){try{return JSON.parse(localStorage.getItem(k)||'[]');}catch(e){return [];}}
-function saveJ(k,a){try{localStorage.setItem(k,JSON.stringify(a));}catch(e){}}
+var DEMO_ON=false;
+function saveJ(k,a){if(DEMO_ON&&k===LS)return;try{localStorage.setItem(k,JSON.stringify(a));}catch(e){}}
 function savedName(){try{return localStorage.getItem(LN)||'';}catch(e){return '';}}
 let posts=loadJ(LS),consts=loadJ(LC);
 
@@ -788,23 +1004,24 @@ function inCls(p){return !CLS||normCls(p.cls)===normCls(CLS);}
 const LNO='yume_no_v1',LCL='yume_cls_v1';
 function normNo(v){const d=String(v||'').normalize('NFKC').replace(/[^0-9]/g,'');return d?String(parseInt(d,10)):'';}
 function postId(p){if(p.no)return normCls(p.cls)+'#'+p.no;const n=normName(p.name);return n?normCls(p.cls)+'|'+n:'';}
-function myNo(){try{return normNo(localStorage.getItem(LNO)||'');}catch(e){return '';}}
-function myCls(){if(CLS)return CLS;try{return localStorage.getItem(LCL)||'';}catch(e){return '';}}
+function myNo(){if(DEMO_ON)return '3';try{return normNo(localStorage.getItem(LNO)||'');}catch(e){return '';}}
+function myCls(){if(DEMO_ON)return '1組';if(CLS)return CLS;try{return localStorage.getItem(LCL)||'';}catch(e){return '';}}
 function myId(){const no=myNo();if(no)return normCls(myCls())+'#'+no;const n=normName(savedName());return n?normCls(myCls())+'|'+n:'';}
 function isMine(p){const id=myId();if(!id)return false;
  if(p.no)return postId(p)===id;
  const n=normName(savedName());return !!n&&normName(p.name)===n&&inCls(p);}
-function myLabel(){const no=myNo();if(no)return (CLS?'':(myCls()?myCls()+' ':''))+no+'番';return savedName();}
+function myLabel(){const a=posts.filter(p=>isMine(p));const p=a[a.length-1];if(p)return p.nm||p.name||'わたし';return myNo()?'登録ずみ':savedName();}
 
 
 /* 共有シートの状態 */
 let feedUrl='',feedOn=false,feedTimer=null,feedBusy=false,feedFail=0,feedAt=0;
 
 /* ══ 集計（頻度・共起・まとまり） ══ */
-let WORDS=[],EDGES=[],INDEX={},MAXN=1,CLUST=[],NC=0,CTH=1,POS=[],ACT=[],QMODE='q1';
+let WORDS=[],EDGES=[],INDEX={},MAXN=1,CLUST=[],NC=0,CTH=1,POS=[],ACT=[],QMODE='q1',PEOPLE=0;
 function analyze(){
  const f=new Map(),co=new Map();
- markRevisions();ACT=posts.filter(p=>!p.old&&(p[QMODE]||'').trim()&&inCls(p));
+ markRevisions();ACT=posts.filter(p=>(p[QMODE]||'').trim()&&inCls(p));
+ PEOPLE=new Set(ACT.map((p,i)=>personOf(p,i))).size;
  ACT.forEach((p,pi)=>{
   [[QMODE,p[QMODE]]].forEach(fl=>{
    const fld=fl[0],txt=fl[1];if(!txt)return;
@@ -813,11 +1030,11 @@ function analyze(){
     const ws=[...new Set(tokenize(sn))];
     ws.forEach(w=>uniq.add(w));
     for(let i=0;i<ws.length;i++)for(let j=i+1;j<ws.length;j++){
-     const k=[ws[i],ws[j]].sort().join(SEP);let st=co.get(k);if(!st){st=new Set();co.set(k,st);}st.add(pi);}});
+     const k=[ws[i],ws[j]].sort().join(SEP);let st=co.get(k);if(!st){st=new Set();co.set(k,st);}st.add(personOf(p,pi));}});
    uniq.forEach(w=>{
     let e=f.get(w);
     if(!e){e={w:w,n:0,q1:0,q2:0,mine:false,deg:0,who:[],ps:new Set(),added:0};f.set(w,e);}
-    e.ps.add(pi);e.n=e.ps.size;e[fld]++;if(p.mine)e.mine=true;
+    e.ps.add(personOf(p,pi));e.n=e.ps.size;e[fld]++;if(p.mine)e.mine=true;
     e.who.push({name:p.name||'（なまえなし）',fld:fld,txt:txt,mine:!!p.mine});});});});
  ACT.forEach(p=>{addedWords(p).forEach(w=>{const e=f.get(w);if(e)e.added++;});});
  WORDS=[...f.values()].sort((a,b)=>b.n-a.n||a.w.localeCompare(b.w)).slice(0,LIMIT);
@@ -846,7 +1063,7 @@ const _cq=new THREE.Quaternion(),_cu=new THREE.Vector3();
 /* 星は、見上げたときの頭の真上（天頂）に集める。
    天頂を中心にした平面の上で、よく使われた言葉ほど真ん中に置き、
    星と文字の「札」が重ならないように押しひろげてから、空の丸みにもどす。 */
-function starSize(w){return 4.5+11*Math.pow(w.n/MAXN,.6);}
+function starSize(w){return 4.2+10*Math.pow(w.n/MAXN,.6);}
 /* ══ 読みのグループ（人で分ける）と、意味のある空の配置 ══
    真上＝多くの人が共有する言葉（重なり）
    方角＝読みのグループごとの言葉（分かれ）
@@ -950,8 +1167,8 @@ function hLabel(text,col,h){
 function addGroupLabels(){
  GROUPS.forEach((G,k)=>{
   const th=(G.minor?63:31)*Math.PI/180;
-  const v=new THREE.Vector3(Math.sin(th)*Math.sin(G.az),Math.cos(th),-Math.sin(th)*Math.cos(G.az)).multiplyScalar(SR*.985);
-  const sp=hLabel(G.name+'　'+G.members.length+'人',hex(G.col),G.minor?4.2:5.2);
+  const v=(G.center&&!G.minor)?G.center.clone().multiplyScalar(.985):new THREE.Vector3(Math.sin(th)*Math.sin(G.az),Math.cos(th),-Math.sin(th)*Math.cos(G.az)).multiplyScalar(SR*.985);
+  const sp=hLabel(G.name+'　'+G.members.length+'人',hex(G.col),G.minor?4.6:6.6);sp.material.opacity=.82;
   sp.position.copy(v);sp.userData={group:k};skyG.add(sp);G.label=sp;});}
 function pickGroup(x,y){
  rig.updateMatrixWorld(true);
@@ -964,7 +1181,7 @@ function pickGroup(x,y){
 function myGroup(){if(!myId())return -1;
  const i=ACT.findIndex(p=>isMine(p));return i>=0&&PGROUP[i]!==undefined?PGROUP[i]:-1;}
 function showGroup(k){
- const G=GROUPS[k];if(!G)return;const n=ACT.length,mine=myGroup()===k;
+ const G=GROUPS[k];if(!G)return;const n=PEOPLE,mine=myGroup()===k;
  $('sw').textContent=G.name;
  $('sm').textContent=G.members.length+'人（クラスの'+Math.round(G.members.length/Math.max(1,n)*100)+'%）'+
   (G.minor?'：ほかの人とあまり重ならない、それぞれの読み':'が、この読みのグループ')+(mine?'　／　あなたもこのグループ':'');
@@ -994,7 +1211,7 @@ function buildSky(){
  lineMesh=null;stars=[];
  WORDS.forEach((w,i)=>{
   const sz=starSize(w),nch=[...w.w].length;
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,transparent:true,
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:WSTAR_TEX,transparent:true,opacity:.92,
    depthTest:false,blending:THREE.AdditiveBlending}));
   sp.position.copy(POS[i]);sp.scale.setScalar(sz);sp.userData={i:i};skyG.add(sp);
   const lb=label(w.w,'#e7edfb',LCH,w.n>1?.92:.68);
@@ -1002,6 +1219,7 @@ function buildSky(){
   lb.position.y-=sz*.5+LCH*nch*.5+1.2;
   lb.renderOrder=3;skyG.add(lb);
   stars.push({sp:sp,lb:lb,sz:sz,ph:Math.random()*6.28,lbo:sz*.5+LCH*nch*.5+1.2,drop:sz*.5+LCH*nch+1.2});});
+ addNebulae();
  addGroupLabels();
  placeLabels();}
 
@@ -1049,8 +1267,8 @@ function lineThreshold(vis){
 /* 一人だけの組は、細くかすかな線。人数が多いほど太く明るく */
 function lineStyle(n){
  const k=MAXE>1?(n-1)/(MAXE-1):1;
- const b=n<=1?.18:.24+.56*Math.pow(k,.7);
- return {w:n<=1?.16:.3+1.65*Math.pow(k,.8),c:[.62*b,.74*b,1*b]};}
+ const b=n<=1?.13:.17+.4*Math.pow(k,.7);
+ return {w:n<=1?.12:.22+1.15*Math.pow(k,.8),c:[.66*b,.76*b,1*b]};}
 function buildLines(vis){
  if(lineMesh){skyG.remove(lineMesh);lineMesh.geometry.dispose();lineMesh=null;}
  if(lineMeshWeak){skyG.remove(lineMeshWeak);lineMeshWeak.geometry.dispose();lineMeshWeak=null;}
@@ -1125,6 +1343,7 @@ function applyFilter(f){
   else col=_c.setHex(0xdfe6f5).lerp(_c2.setHex(G?G.col:0xdfe6f5),.4).getHex();
   s.sp.material.color.setHex(col);});
  GROUPS.forEach(G=>{if(G.label)G.label.visible=FILT==='all'||FILT==='cluster';});
+ NEBS.forEach(n=>{n.visible=FILT==='all'||FILT==='cluster';});
  buildLines(vis);updateCounter();reselect();
  if(typeof missionEvent==='function')missionEvent({k:'filter',f:FILT});}
 
@@ -1133,7 +1352,7 @@ function hhmm(t){const d=new Date(t);
 
 function updateCounter(){
  const shown=stars.filter(s=>s.sp.visible).length;
- $('counter').innerHTML=(CLS?esc(CLS)+'　':'')+'<b>'+ACT.length+'</b>人ぶん　言葉 '+shown+'／'+WORDS.length+'　線 '+SHOWN.length+
+ $('counter').innerHTML=(CLS?esc(CLS)+'　':'')+'<b>'+PEOPLE+'</b>人ぶん　言葉 '+shown+'／'+WORDS.length+'　線 '+SHOWN.length+
   (LINES_ON&&SHOWN.length?'<br>線の太さ＝一緒に使った人数（近づくと細い線も）':'')+
   (FILT==='cluster'?'　まとまり '+NC:'')+
   (feedOn?'<br>自動取りこみ中'+(feedAt?'（'+hhmm(feedAt)+'に確認）':'…'):'');
@@ -1176,7 +1395,7 @@ function showStar(i){
  $('sm').textContent=w.n+'人が使った言葉　／　問一 '+w.q1+'人・問二 '+w.q2+'人　／　'+
   (w.deg===0?'線のない孤星':'一緒に使われた言葉 '+w.deg+'語')+
   (w.mine?'　／　自分も使った言葉':'')+'　／　'+(TEXTW.has(w.w)?'本文に出てくる言葉':'読み手が生んだ言葉')+
-  (w.added?'　／　書き直しで'+w.added+'人が加えた言葉':'')+
+  (w.added?'　／　新たな考えで'+w.added+'人が加えた言葉':'')+
   '　／　'+(WKIND[i]==='core'?'みんなの重なり（半分以上の人）':WKIND[i]==='minor'?'一人だけの読み':(GROUPS[WG[i]]?GROUPS[WG[i]].name+'に多い言葉':''));
  const nb=EDGES.filter(e=>e.a===i||e.b===i).map(e=>({j:e.a===i?e.b:e.a,n:e.n})).sort((a,b)=>b.n-a.n).slice(0,8);
  $('sco').innerHTML=nb.length?'<span class="ct">いっしょに使われた言葉（数字＝人数。タップでその星へ）</span>'+
@@ -1295,7 +1514,7 @@ function colMap(rows){
  if(!rows.length)return null;
  const h=rows[0].map(s=>(s||'').replace(/\s/g,''));
  const find=re=>{for(let i=0;i<h.length;i++)if(re.test(h[i]))return i;return -1;};
- const ni0=find(/なまえ|名前|氏名/);
+ const ni0=find(/ニックネーム|ペンネーム/)>=0?find(/ニックネーム|ペンネーム/):find(/なまえ|名前|氏名/);
  let noi=-1;for(let i=0;i<h.length;i++)if(/出席番号|^番号/.test(h[i])&&i!==ni0){noi=i;break;}
  const ni=ni0>=0?ni0:find(/出席番号|^番号/),
        ai=find(/問一|問1|問①/),
@@ -1320,12 +1539,11 @@ function rowsToPosts(rows){
   const a=(c[m.ai]||'').trim(),b=(c[m.bi]||'').trim();
   if(!a&&!b)continue;
   const no=m.noi>=0?normNo(c[m.noi]):'',nm=(c[m.ni]||'').trim();
-  out.push({name:(no?no+'番 ':'')+nm,nm:nm,no:no,q1:a,q2:b,mine:false,cls:m.ci>=0?(c[m.ci]||'').trim():''});}
+  out.push({name:nm,nm:nm,no:no,q1:a,q2:b,mine:false,cls:m.ci>=0?(c[m.ci]||'').trim():''});}
  return out;}
 
 function feedUI(msg){
  if(msg!==undefined)$('feedst').textContent=msg;
- $('postbtn').style.display=feedOn?'none':'';
  $('tfeed').textContent=feedOn?
   ((CLS?CLS+'の空　':'学年全体の空　')+'自動取りこみ：オン'+(feedAt?'　'+hhmm(feedAt)+'に確認':'')):'';
  updateCounter();}
@@ -1376,6 +1594,7 @@ function feedFromQuery(){
   return m?decodeURIComponent(m[1]):'';}catch(e){return '';}}
 
 function initFeed(){
+ if(DEMO_ON){feedUI('');$('tfeed').textContent='デモ：見本の回答20人分（この端末には保存されません）';return;}
  let u='';try{u=localStorage.getItem(LF)||'';}catch(e){}
  const q=feedFromQuery();
  if(q&&u&&q!==u&&posts.length){posts.length=0;consts.length=0;seen.clear();saveJ(LS,posts);saveJ(LC,consts);buildSky();applyFilter();renderConsts();}
@@ -1405,9 +1624,11 @@ function toTitle(){
  $('title').classList.remove('gone');void $('title').offsetWidth;$('title').classList.remove('hide');inSky=false;INTRO.menu=true;showQ(false);}
 $('back').addEventListener('click',toTitle);
 $('goSky').addEventListener('click',enterSky);
-$('goPost').addEventListener('click',()=>{enterSky();openPost();});
-$('goImp').addEventListener('click',()=>{enterSky();panel('imp',true);});
-$('postbtn').addEventListener('click',openPost);
+
+/* 先生用の取りこみ画面：表紙の小さな題名「言 葉 の 星 座」を3回つづけてタップすると開く */
+(()=>{let n=0,t=0;const el=document.querySelector('#title .apptitle');if(!el)return;
+ el.addEventListener('click',()=>{const now=Date.now();n=(now-t<700)?n+1:1;t=now;if(n>=3){n=0;enterSky();panel('imp',true);}});})();
+
 $('sinfo').addEventListener('click',e=>{
  const g=e.target.closest('[data-go]');if(g){goStar(+g.dataset.go);return;}
  if(e.target.closest('#sread')){readAloud();return;}
@@ -1572,7 +1793,7 @@ function loop(){
  /* 草のゆれ */
  if(grassMat)grassMat.uniforms.t.value=T;
  /* またたき */
- stars.forEach(s=>{if(s.sp.visible)s.sp.scale.setScalar(s.sz*(1+.085*Math.sin(T*1.7+s.ph)));});
+ stars.forEach(s=>{if(s.sp.visible)s.sp.scale.setScalar(s.sz*(1+.05*Math.sin(T*1.7+s.ph)));});
  /* 星が増える演出 */
  for(let i=pend.length-1;i>=0;i--){
   const o=pend[i];o.t+=dt;
@@ -1589,7 +1810,7 @@ function loop(){
  renderer.render(scene,camera);}
 
 /* ══ 追加機能 ══ */
-let LIMIT=60;
+let LIMIT=100;
 let guided=false;
 
 /* 『夢十夜』第一夜の本文に出てくる主な言葉（漢字・カタカナのまとまりで照らす） */
@@ -1680,7 +1901,7 @@ function openRank(){
  const lone=WORDS.filter(w=>w.deg===0).length,txt=WORDS.filter(w=>TEXTW.has(w.w)).length;
  const top=WORDS.slice(0,20),mx=top[0].n||1;
  openSheet('言葉の順位とまとめ',
-  '<div class="sumg"><div><b>'+ACT.length+'人</b>回答した人</div><div><b>'+WORDS.length+'語</b>夜空の言葉</div>'+
+  '<div class="sumg"><div><b>'+PEOPLE+'人</b>回答した人</div><div><b>'+WORDS.length+'語</b>夜空の言葉</div>'+
   '<div><b>'+lone+'</b>孤星（ひとりの言葉）</div><div><b>'+Math.round(txt/WORDS.length*100)+'%</b>本文に出てくる言葉</div></div>'+
   top.map((w,k)=>'<button class="rr" data-go="'+k+'"><span class="rk">'+(k+1)+'</span><span class="rw">'+esc(w.w)+
    '</span><span class="bar"><i class="'+(TEXTW.has(w.w)?'t':'')+'" style="width:'+Math.round(w.n/mx*100)+'%"></i></span><small>'+
@@ -2357,7 +2578,7 @@ const MS=[
   t:'頭の真上の、大きく光る星をタップしよう。',
   why:'多くの人が同じ言葉を使ったところは、クラスの読みの「共通の土台」です。',
   ok:ev=>ev.k==='star'&&WORDS[ev.i]&&(WKIND[ev.i]==='core'||coreIdx().indexOf(ev.i)>=0),
-  learn:ev=>{const w=WORDS[ev.i];return '「'+w.w+'」は、'+ACT.length+'人中'+w.n+'人が使った言葉。ここはクラスのみんなが共通して注目したところ。';},
+  learn:ev=>{const w=WORDS[ev.i];return '「'+w.w+'」は、'+PEOPLE+'人中'+w.n+'人が使った言葉。ここはクラスのみんなが共通して注目したところ。';},
   hint:()=>{const i=coreIdx()[0];if(POS[i]){flyTo(POS[i]);showNote('真上の大きな星のほうへ向きを変えました。');}}},
  {tag:'分かれ',title:'自分とちがう読みのグループ',
   t:'空に浮かぶグループ名のうち、自分のグループ以外を一つタップして、その人たちの答えを読もう。',
@@ -2379,12 +2600,12 @@ function renderMission(){
  const el=$('mission');if(!MS_ON){el.classList.remove('on');return;}
  el.classList.add('on');
  const dots=MS.map((m,k)=>'<i class="'+(k<MI||(k===MI&&MST==='done')?'d':k===MI?'c':'')+'"></i><span class="dl'+(k<=MI?' a':'')+'">'+m.tag+'</span>').join('')+
-  '<i class="'+(MI>=MS.length?'c':'')+'"></i><span class="dl'+(MI>=MS.length?' a':'')+'">書き直し</span>';
+  '<i class="'+(MI>=MS.length?'c':'')+'"></i><span class="dl'+(MI>=MS.length?' a':'')+'">新たな考え</span>';
  if(MI>=MS.length){
   el.innerHTML='<div class="mh"><b>3つの発見</b><button data-m="close">×</button></div>'+
    '<ol>'+MLEARN.map((s,k)=>s?'<li><b class="tg">'+MS[k].tag+'</b>'+esc(s)+'</li>':'').join('')+'</ol>'+
    '<p class="ln cc">クラスの読みには「重なり」と「分かれ」と「少数の読み」がある。ほかの人の読みを知ると、自分の読みがどこにあるかがわかる。</p>'+
-   '<p class="ok" style="font-size:13px">さいごに：書き直そう</p><p class="ln">出会った読みをふまえて、自分の答えを書き直そう（付け足してもよい）。書き直したら、同じフォームでもう一度送ろう。</p>'+
+   '<p class="ok" style="font-size:13px">さいごに：新たな考えを書こう</p><p class="ln">夜空で出会った読みをふまえて、プリントの「③ 新たな考え」に書こう。</p>'+
    '<div class="mr"><button data-m="myans" class="y">わたしの答えを見る</button><button data-m="sum">まとめ</button></div><div class="md">'+dots+'</div>';
   return;}
  const m=MS[MI];let body,btns;
@@ -2437,24 +2658,24 @@ function openSummary(){
   '本文に出てくる言葉は'+ts.pct+'%、読み手が生んだ言葉は'+(100-ts.pct)+'%だった。わたしたちは本文を（　　　　）読んでいる。',
   ones.length?'「'+ones[0].w.w+'」と書いたのは一人だけだった。この読みは（　　　　）という点で大事だ。':''].filter(Boolean);
  const learned=MLEARN.filter(Boolean);
- SUMTXT='【夜空のまとめ・'+(CLS?CLS+'・':'')+QN+'】'+ACT.length+'人ぶん・言葉'+WORDS.length+'\n'+
+ SUMTXT='【夜空のまとめ・'+(CLS?CLS+'・':'')+QN+'】'+PEOPLE+'人ぶん・言葉'+WORDS.length+'\n'+
   QN+'で多い言葉：'+top3.map(o=>o.w.w+'('+o.w.n+')').join('、')+'\n'+
   '多くの人が結んだ言葉：'+es.map(e=>Wd(e.a)+'―'+Wd(e.b)+'('+e.n+'人)').join('、')+'\n'+
   '本文の言葉 '+ts.pct+'%／読み手の言葉 '+(100-ts.pct)+'%\n'+
-  (ACT.some(p=>p.rev)?'書き直した人：'+ACT.filter(p=>p.rev).length+'人\n':'')+
+  (ACT.some(p=>p.rev)?'新たな考えを送った人：'+ACT.filter(p=>p.rev).length+'人\n':'')+
   (GROUPS.length?'読みのグループ：'+GROUPS.map(G=>G.name+'('+G.members.length+'人)').join('、')+'\n':'')+
   (ones.length?'一人だけの言葉：'+ones.map(o=>o.w.w).join('、')+'\n':'')+
   (learned.length?'\n【ミッションでわかったこと】\n'+learned.map((s,k)=>(k+1)+'. '+s).join('\n')+'\n':'')+
   '\n【わかったことを書いてみよう】\n'+frames.map((s,k)=>(k+1)+'. '+s).join('\n');
  const revs=ACT.filter(p=>p.rev),addTop=WORDS.map((w,i)=>({w:w,i:i})).filter(o=>o.w.added>0).sort((a,b)=>b.w.added-a.w.added).slice(0,6);
- const revHtml='<div class="sm"><h4>③ 書き直し</h4>'+(revs.length?'<p class="sl">'+revs.length+'人が答えを書き直しました。書き直しで増えた言葉：</p><div class="rl">'+
+ const revHtml='<div class="sm"><h4>③ 新たな考え</h4>'+(revs.length?'<p class="sl">'+revs.length+'人が新たな考えを送りました。新たな考えで増えた言葉：</p><div class="rl">'+
   addTop.map(o=>'<button class="ri" data-go="'+o.i+'">'+esc(o.w.w)+'<small>+'+o.w.added+'人</small></button>').join('')+'</div>':'')+
-  '<p class="em">夜空で出会った読みをふまえて、自分の答えを書き直そう。書き直したら、同じフォームでもう一度送ると、書き直しの彗星が飛んできます。</p></div>';
+  '<p class="em">夜空で出会った読みをふまえて、プリントの「③ 新たな考え」に書こう。</p></div>';
  const grpHtml=GROUPS.length?'<div class="sm"><h4>読みのグループ（人数）</h4>'+GROUPS.map(G=>'<p class="sl" style="color:'+hex(G.col)+'">'+esc(G.name)+'　'+G.members.length+'人</p><div class="rl">'+
   G.top.filter(w=>w in INDEX).slice(0,4).map(w=>chip({w:WORDS[INDEX[w]],i:INDEX[w]})).join('')+'</div>').join('')+'</div>':'';
  openSheet('夜空のまとめ'+(CLS?'（'+CLS+'）':''),
   '<div class="qs"><p>'+esc(QTEXT.q1)+'</p><p>'+esc(QTEXT.q2)+'</p></div>'+
-  '<div class="sumg"><div><b>'+ACT.length+'人</b>回答した人</div><div><b>'+WORDS.length+'語</b>夜空の言葉</div>'+
+  '<div class="sumg"><div><b>'+PEOPLE+'人</b>回答した人</div><div><b>'+WORDS.length+'語</b>夜空の言葉</div>'+
   '<div><b>'+EDGES.length+'組</b>線で結ばれた組</div><div><b>'+WORDS.filter(w=>w.n===1).length+'語</b>一人だけの言葉</div></div>'+
   '<div class="sm"><h4>'+QN+'でよく使われた言葉</h4><div class="rl">'+top3.map(chip).join('')+'</div></div>'+
   '<div class="sm"><h4>多くの人が結んだ言葉（タップで文を読む）</h4><div class="rl">'+
@@ -2518,7 +2739,7 @@ function introStart(){
    sp.userData={sz:k<8?8+Math.random()*7:2.5+Math.random()*4,at:5.2+k*.07};sp.scale.setScalar(.001);g.add(sp);}
   scene.add(g);INTRO.deco=g;}
  stars.forEach((s,i)=>{s.introAt=5.2+(i/Math.max(1,stars.length))*3.0;s.lb.visible=false;});
- GROUPS.forEach(G=>{if(G.label)G.label.visible=false;});
+ GROUPS.forEach(G=>{if(G.label)G.label.visible=false;});NEBS.forEach(n=>{n.visible=false;});
  if(lineMesh)lineMesh.visible=false;}
 function introCap(k){
  const el=$('icap');el.classList.remove('on');
@@ -2530,7 +2751,7 @@ function introEnd(){
  $('intro').classList.remove('on','out');$('icap').classList.remove('on');
  if(INTRO.deco){scene.remove(INTRO.deco);INTRO.deco=null;}
  stars.forEach(s=>{s.introAt=0;s.lb.visible=s.sp.visible;});
- GROUPS.forEach(G=>{if(G.label)G.label.visible=FILT==='all'||FILT==='cluster';});
+ GROUPS.forEach(G=>{if(G.label)G.label.visible=FILT==='all'||FILT==='cluster';});NEBS.forEach(n=>{n.visible=FILT==='all'||FILT==='cluster';});
  if(lineMesh){lineMesh.visible=true;lineMesh.material.opacity=1;}
  ring.visible=false;pitch=1.15;
  $('title').classList.remove('gone');void $('title').offsetWidth;$('title').classList.remove('hide');}
@@ -2802,8 +3023,8 @@ function applyMine(quiet){
  const k=WORDS.filter(w=>w.mine).length;
  if(!nm)return;
  if(k){const g=myGroup();showNote('金色の星が、あなたの言葉です（'+k+'語）。'+(g>=0?'あなたは'+GROUPS[g].name+'（'+GROUPS[g].members.length+'人）のグループです。':''));}
- else showNote('「'+myLabel()+'」の回答は、まだ夜空にありません。フォームで選んだクラス・出席番号と同じか確かめてください。届きしだい金色になります。');}
-function updMe(){const n=myLabel();$('mebtn').textContent=n?('わたし：'+n):'出席番号を入れる';}
+ else showNote('あなたの回答は、まだ夜空にありません。フォームで選んだクラス・出席番号と同じか確かめてください。届きしだい金色になります。');}
+function updMe(){const n=myLabel();$('mebtn').textContent=n?('わたし：'+n):'わたしを登録';}
 function askName(){
  const no=$('nameno'),cl=$('namecls');
  if(!no.options.length){no.innerHTML='<option value="">出席番号をえらぶ</option>'+Array.from({length:42},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'番</option>').join('');}
@@ -2823,24 +3044,25 @@ $('namelater').addEventListener('click',()=>{$('namebox').classList.remove('on')
 /* ══ ③ 書き直し：同じ名前でもう一度送られた答えは「書き直し」として扱う ══ */
 function markRevisions(){
  const by=new Map();
- posts.forEach(p=>{p.old=false;p.rev=false;delete p.prev;const k=postId(p);if(!k)return;
-  if(!by.has(k))by.set(k,[]);by.get(k).push(p);});
- by.forEach(list=>{if(list.length<2)return;
-  list.forEach((p,k)=>{if(k<list.length-1)p.old=true;});
-  const last=list[list.length-1],first=list[0];last.rev=true;last.prev={q1:first.q1||'',q2:first.q2||''};});}
+ posts.forEach(p=>{p.old=false;p.rev=false;delete p.prev;const id=postId(p);if(!id)return;
+  const k=id+'|'+normName(p.nm||'');if(!by.has(k))by.set(k,[]);by.get(k).push(p);});
+ by.forEach(list=>{if(list.length<2)return;const first=list[0];
+  list.forEach((p,k)=>{if(k>0){p.rev=true;p.prev={q1:first.q1||'',q2:first.q2||''};}});});}
+/* 人数は「人」で数える（同じ人が2回送っても1人） */
+function personOf(p,i){const id=postId(p);return id?id+'|'+normName(p.nm||''):('#'+i);}
 function wordSetOf(a,b){const s=new Set();[a,b].forEach(t=>{if(t)wordsOf(t).forEach(w=>s.add(w));});return s;}
 function addedWords(p){if(!p.rev||!p.prev)return [];const was=wordSetOf(p.prev[QMODE]);
  return [...wordSetOf(p[QMODE])].filter(w=>!was.has(w));}
-function myPost(){if(!myId())return null;return ACT.find(p=>isMine(p))||null;}
+function myPost(){if(!myId())return null;const a=ACT.filter(p=>isMine(p));return a.length?a[a.length-1]:null;}
 function showMyAnswer(){
  const p=myPost();
  if(!p){if(!myId()){askName();return;}
-  say('わたしの答え','「'+esc(myLabel())+'」の答えは、まだ夜空に届いていません。');return;}
+  say('わたしの答え','あなたの答えは、まだ夜空に届いていません。');return;}
  const hlAdd=(t,add)=>{let s=esc(t||'');add.forEach(w=>{s=s.split(esc(w)).join('<mark class="kb">'+esc(w)+'</mark>');});return s;};
  const add=addedWords(p);
- say('わたしの答え',(p.rev?'<b style="display:inline;font-size:12px">はじめの答え</b><br>問一：'+esc(p.prev.q1)+'<br>問二：'+esc(p.prev.q2)+'<br><br><b style="display:inline;font-size:12px">書き直した答え</b>（色は増えた言葉）<br>':'')+
+ say('わたしの答え',(p.rev?'<b style="display:inline;font-size:12px">はじめの答え</b><br>問一：'+esc(p.prev.q1)+'<br>問二：'+esc(p.prev.q2)+'<br><br><b style="display:inline;font-size:12px">新たな考え</b>（色は増えた言葉）<br>':'')+
   '問一：'+hlAdd(p.q1,add)+'<br>問二：'+hlAdd(p.q2,add)+
-  '<br><br>夜空で出会った、自分とちがう読みをふまえて、答えを書き直そう。<br>書き直したら、同じフォームでもう一度送ってね。');}
+  '<br><br>夜空で出会った、自分とちがう読みをふまえて、プリントの「③ 新たな考え」に書こう。');}
 
 /* ══ 問一の空・問二の空 ══
    問一は「女の墓」、問二は「百合の野」。上のボタンで行き来する。 */
@@ -2861,7 +3083,65 @@ function setQMode(q){
   $('fade').classList.remove('on');renderQ(QMODE);qBanner();chime(-1,q==='q1'?523.25:659.25);},480);}
 $('qtog').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b)setQMode(b.dataset.q);});
 
+/* ── 読みのグループを、繊細な星雲で包む ──
+   大きなぼかしではなく、細い筋（ガスのたなびき）と、細かな星くずで描く */
+const NEB_TEX=mkTex((g,s)=>{
+ g.clearRect(0,0,s,s);g.lineCap='round';
+ /* たなびく細い筋 */
+ for(let k=0;k<70;k++){
+  const a=Math.random()*6.283,r0=s*(.05+Math.random()*.32),x=s/2+Math.cos(a)*r0,y=s/2+Math.sin(a)*r0;
+  const len=s*(.08+Math.random()*.22),b=a+Math.PI/2+(Math.random()-.5)*1.2;
+  g.strokeStyle='rgba(255,255,255,'+(.025+Math.random()*.05)+')';g.lineWidth=s*(.004+Math.random()*.018);
+  g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+Math.cos(b)*len*.6+(Math.random()-.5)*len*.5,y+Math.sin(b)*len*.6+(Math.random()-.5)*len*.5,
+   x+Math.cos(b)*len,y+Math.sin(b)*len);g.stroke();}
+ /* うすい光の層（小さめに、少しだけ） */
+ for(let k=0;k<14;k++){const a=Math.random()*6.283,d=Math.random()*s*.2,x=s/2+Math.cos(a)*d,y=s/2+Math.sin(a)*d,r=s*(.06+Math.random()*.12);
+  const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(255,255,255,.07)');gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr;g.fillRect(0,0,s,s);}
+ /* 細かな粒 */
+ for(let k=0;k<260;k++){const a=Math.random()*6.283,d=Math.pow(Math.random(),.7)*s*.42;
+  g.fillStyle='rgba(255,255,255,'+(.05+Math.random()*.25)+')';g.fillRect(s/2+Math.cos(a)*d,s/2+Math.sin(a)*d,1,1);}
+ /* ふちを消す */
+ const m=g.createRadialGradient(s/2,s/2,s*.18,s/2,s/2,s*.5);m.addColorStop(0,'rgba(0,0,0,0)');m.addColorStop(1,'rgba(0,0,0,1)');
+ g.globalCompositeOperation='destination-out';g.fillStyle=m;g.fillRect(0,0,s,s);g.globalCompositeOperation='source-over';},256);
+let NEBS=[];
+function addNebulae(){
+ NEBS=[];
+ const put=(v,col,sc,op)=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:NEB_TEX,color:col,transparent:true,depthTest:false,depthWrite:false,
+   blending:THREE.AdditiveBlending,opacity:op}));sp.position.copy(v).multiplyScalar(.985);sp.scale.setScalar(sc);sp.renderOrder=-3;
+  sp.material.rotation=Math.random()*6.28;skyG.add(sp);NEBS.push(sp);return sp;};
+ /* 星くず：グループの星のまわりに、小さな光の粒を散らす */
+ const dust=(idx,col,n)=>{
+  const P=[],tmp=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
+  for(let k=0;k<n;k++){
+   const c=POS[idx[Math.floor(Math.random()*idx.length)]];
+   const t1=new THREE.Vector3().crossVectors(c,up);if(t1.lengthSq()<1e-6)t1.set(1,0,0);t1.normalize();
+   const t2=new THREE.Vector3().crossVectors(c,t1).normalize();
+   const g1=(Math.random()+Math.random()+Math.random()-1.5)*12,g2=(Math.random()+Math.random()+Math.random()-1.5)*12;
+   tmp.copy(c).addScaledVector(t1,g1).addScaledVector(t2,g2).normalize().multiplyScalar(SR*.99);P.push(tmp.x,tmp.y,tmp.z);}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(P,3));
+  const pts=new THREE.Points(geo,new THREE.PointsMaterial({map:DOT_TEX,color:col,size:.9,sizeAttenuation:true,transparent:true,
+   opacity:.8,depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending}));pts.renderOrder=-2;skyG.add(pts);NEBS.push(pts);};
+ GROUPS.forEach((G,k)=>{
+  const idx=WORDS.map((w,i)=>i).filter(i=>WG[i]===k&&WKIND[i]!=='core');
+  if(!idx.length)return;
+  const col=G.minor?0x8fa0c0:G.col,op=G.minor?.14:.34;
+  idx.forEach(i=>put(POS[i],col,34+starSize(WORDS[i])*2,op));
+  const c=new THREE.Vector3();idx.forEach(i=>c.add(POS[i]));c.normalize().multiplyScalar(SR);G.center=c;
+  if(!G.minor){put(c,col,60+idx.length*4,op*.7);dust(idx,col,60+idx.length*18);}});
+ const core=WORDS.map((w,i)=>i).filter(i=>WKIND[i]==='core');
+ core.forEach(i=>put(POS[i],0xfff0d0,30+starSize(WORDS[i])*1.6,.06));}
+
 /* ══ はじまり ══ */
+/* デモ：リンクの最後に ?demo を付けると、見本の回答20人分で動く（保存しない） */
+DEMO_ON=!!window.__DEMO||(()=>{try{return new URLSearchParams(location.search).has('demo');}catch(e){return false;}})();
+if(DEMO_ON){
+ const NICKS=['ほし','つき','そら','ゆめ','はな','かぜ','あめ','ゆき','ひかり','うみ','もり','くも','つばさ','こはく','るり','あかね','しずく','みお','すず','なぎ'];
+ const ADD1=['正直えぐいと思った。','','百年は長すぎてつらい。','','','さびしくてこわくなった。','','','','','','','やばいくらい不安。','','','','','','',''];
+ const ADD2=['','とてもせつない。','','','きれいで、はかない。','','','','','','うつくしい花だと思う。','','','','','','','','',''];
+ posts=DEMO.map((r,i)=>({name:NICKS[i],nm:NICKS[i],no:String(i+1),cls:'1組',q1:r[1]+(ADD1[i]||''),q2:r[2]+(ADD2[i]||''),mine:false}));
+ seen.clear();posts.forEach(p=>{seen.add(keyOf(p));p.mine=isMine(p);});
+ NAME_ASKED=true;}
 buildWorld();buildSky();applyFilter('all');renderConsts();updateCounter();initFeed();
 applyPlace(PLACE,true);
 toolOn('lines',LINES_ON);
