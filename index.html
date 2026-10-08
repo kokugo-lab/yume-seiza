@@ -67,6 +67,14 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05070f;color:var(--su
 #sinfo ul{margin:0;padding:0 0 0 1.1em;max-height:30vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #sinfo li{font-size:12.5px;line-height:1.95;color:var(--sumi);margin-bottom:5px}
 #sinfo li em{font-style:normal;color:var(--ai);font-size:11px;letter-spacing:.06em}
+#sinfo li .fv{margin-left:8px;padding:1px 9px;border-radius:999px;border:1px solid #c9a34a;background:#fffaf0;color:#8a6a1c;font:inherit;font-size:11px;letter-spacing:.06em;cursor:pointer;vertical-align:1px}
+#sinfo li .fv.on{background:#e8c86a;color:#241c08;border-color:#e8c86a;font-weight:600}
+#mission ol.fv{list-style:none;padding:0;margin:0 0 8px}
+#mission ol.fv li.fl{font-size:11.5px;line-height:1.6;margin-bottom:4px;color:#dfe6f5;display:flex;gap:4px;align-items:flex-start}
+#mission ol.fv li.fl.em{color:#6f7d96}
+#mission ol.fv li .tg{flex:none;padding:0 6px;border-radius:4px;background:rgba(232,200,106,.85);color:#241c08;font-size:10.5px;font-weight:600}
+#mission ol.fv li button.fx[data-m]{margin-left:auto;flex:none;border:0;background:none;border:0;color:#9fb0c8;font-size:13px;cursor:pointer;padding:0 4px}
+.sm p.cp{font-size:14px;line-height:2;margin:4px 0 0;user-select:text;-webkit-user-select:text}
 #sinfo .cl{display:block;margin-top:10px;font-size:11px;color:var(--gray);text-align:center;letter-spacing:.1em}
 </style>
 <style>
@@ -450,10 +458,10 @@ ol.fr li{margin-bottom:6px}
   <p class="sub">プリントの問一・問二に書いた言葉を、そのまま打ちこもう。<br>送った瞬間、あなたの言葉が星になって空に増えます。</p>
   <label>なまえ（出席番号でもよい）</label>
   <input id="pname" maxlength="14" placeholder="例：１年Ａ組１番">
-  <label><span id="pq1">問一　「自分は女にだまされたのではなかろうか」と思い始めたときの「自分」の心情</span>
+  <label><span id="pq1">問一　女はなぜ「百年待っていてください。」と言ったのか、できる限り詳しく説明しましょう。</span>
     <em>プリントに書いた文をそのまま打ちこもう。</em></label>
   <textarea id="p1" maxlength="300"></textarea>
-  <label><span id="pq2">問二　「白い百合」は何を表していると考えられるか</span>
+  <label><span id="pq2">問二　男はなぜ「百年はもう来ていたんだな。」と気づいたのか、できる限り詳しく説明しましょう。</span>
     <em>プリントに書いた文をそのまま打ちこもう。</em></label>
   <textarea id="p2" maxlength="300"></textarea>
   <button class="prim" id="send">夜空へ送る</button>
@@ -1189,8 +1197,9 @@ function showGroup(k){
  $('sco').innerHTML=tw.length?'<span class="ct">このグループに多い言葉（タップでその星へ）</span>'+
   tw.map(w=>'<button data-go="'+INDEX[w]+'">'+esc(w)+'</button>').join(''):'';
  const cut=t=>{t=t||'';return t.length>70?t.slice(0,70)+'…':t;};
+ LISTF=[];
  $('sl').innerHTML=G.members.map(i=>{const p=ACT[i];
-  return '<li>'+esc(cut(p[QMODE]))+'<em>'+esc(p.name||'（なまえなし）')+'</em></li>';}).join('');
+  return '<li>'+esc(cut(p[QMODE]))+'<em>'+esc(p.name||'（なまえなし）')+'</em>'+favBtn({q:QMODE,name:p.name||'（なまえなし）',txt:p[QMODE]})+'</li>';}).join('');
  $('sinfo').classList.add('on');$('sinfo').scrollTop=0;select(-1);
  flyTo(G.label.position);
  missionEvent({k:'group',g:k});}
@@ -1312,11 +1321,12 @@ function showEdge(e){
  ACT.forEach(p=>{[[QMODE,p[QMODE]]].forEach(fl=>{
   if(!fl[1])return;
   sentences(fl[1]).forEach(sn=>{const ws=new Set(tokenize(sn));
-   if(ws.has(A)&&ws.has(B))items.push({name:p.name||'（なまえなし）',fld:fl[0],sn:sn});});});});
+   if(ws.has(A)&&ws.has(B))items.push({name:p.name||'（なまえなし）',fld:fl[0],sn:sn,full:fl[1]});});});});
  $('sw').innerHTML='<mark class="ka">'+esc(A)+'</mark>　―　<mark class="kb">'+esc(B)+'</mark>';
  $('sm').textContent=e.n+'人が、同じ文の中でこの二つの言葉を使っています。';
  $('sco').innerHTML='<span class="ct">星へ移る</span><button data-go="'+e.a+'">'+esc(A)+'</button><button data-go="'+e.b+'">'+esc(B)+'</button>';
- $('sl').innerHTML=items.slice(0,40).map(o=>'<li>'+hl(o.sn,A,B)+'<em>'+esc(o.name)+'・'+(o.fld==='q1'?'問一':'問二')+'</em></li>').join('');
+ LISTF=[];
+ $('sl').innerHTML=items.slice(0,40).map(o=>'<li>'+hl(o.sn,A,B)+'<em>'+esc(o.name)+'・'+(o.fld==='q1'?'問一':'問二')+'</em>'+favBtn({q:o.fld,name:o.name,txt:o.full})+'</li>').join('');
  $('sinfo').classList.add('on');$('sinfo').scrollTop=0;
  selectEdge(e);
  missionEvent({k:'edge',e:e});
@@ -1385,9 +1395,9 @@ function pick(x,y,noNear){
  if(best<0&&nd<80&&!noNear)best=near;
  return best;}
 
-function whoList(arr){
+function whoList(arr){LISTF=[];
  return arr.slice(0,30).map(o=>'<li>'+esc(o.txt)+'<em>'+esc(o.name)+'・'+
-  (o.fld==='q1'?'問一':'問二')+'</em></li>').join('');}
+  (o.fld==='q1'?'問一':'問二')+'</em>'+favBtn({q:o.fld,name:o.name,txt:o.txt})+'</li>').join('');}
 
 function showStar(i){
  const w=WORDS[i];
@@ -1631,6 +1641,7 @@ $('goSky').addEventListener('click',enterSky);
 
 $('sinfo').addEventListener('click',e=>{
  const g=e.target.closest('[data-go]');if(g){goStar(+g.dataset.go);return;}
+ const fv=e.target.closest('[data-fav]');if(fv){e.stopPropagation();toggleFav(+fv.dataset.fav,fv);return;}
  if(e.target.closest('#sread')){readAloud();return;}
  if(e.target.closest('#sclose')){stopTour();closeInfo();}});
 
@@ -1781,6 +1792,9 @@ const DEMO=[
 ['18番','時間の長さに心が追いつかず、女への信頼がくずれかけている。','女の愛の清らかさと、死をこえた魂の美しさを表している。'],
 ['19番','待つことの苦しさから、女の約束を疑い始めている。','百年の時をこえて女の魂が来たことを表している。'],
 ['20番','信じたいのに信じきれない、自分の心の弱さに気づいている。','白い花は、けがれのない愛と、女の魂の象徴である。']];
+const DEMO_Q1=["百年という長さで、永遠に変わらない愛を約束したかったから。", "死んでも愛は終わらないことを、男に伝えたかったから。", "生まれ変わって男に逢いに来るには、それだけの時間が必要だったから。", "百合になって戻ってくるための時間として、百年と言った。", "男が本当に自分を愛しているか、待ち続けられるかを試したかったから。", "男の気持ちが本物かどうかを確かめたかったから。", "人間の一生より長い時間を言うことで、死をこえた約束にしたかった。", "この世の時間ではなく、あの世の時間で約束したかったから。", "死ぬ悲しみをやわらげるため、必ず帰ってくると男を安心させたかった。", "男がさびしくならないように、待つという希望をあたえたかったから。", "永遠に男のそばにいたいという気持ちを、百年という言葉で表した。", "女自身も、本当に逢えるか不安で、長い時間を言ったのだと思う。", "男をずっと自分のそばに縛っておきたかったから。", "百年に特別な意味はなく、とても長い時間のたとえだと思う。", "生まれ変わりには長い時間がかかると、女が信じていたから。", "男の愛が永遠かどうかを試すため。", "夢の中の言葉なので、はっきりした理由はないと思う。", "百年たっても忘れないでほしいという、女の願いだから。", "自分の魂が星の破片のように長い時を旅して、戻ってくると考えたから。", "二人の約束を、時間をこえた特別なものにしたかったから。"];
+const DEMO_Q2=["白い百合が女の生まれ変わりで、約束どおり逢いに来たとわかったから。", "百合が女だと気づいたから。", "石の下から伸びてきた百合が、女の墓から咲いたものだったから。", "暁の星を見て、長い夜が明け、約束の時が来たと感じたから。", "たった一つ瞬く暁の星が、女の合図のように思えたから。", "日を勘定するのをやめたら、百年がすでに過ぎていたとわかったから。", "夢の中では時間の感覚がなくなっていて、百年も一瞬だったから。", "疑いが消えて女を信じる気持ちになったとき、待った時間がむくわれたと感じたから。", "百合に口づけして、女の愛を実感したから。", "女の言った通りに、日が東から出て西へ落ち、百合が咲いたから。", "女の約束が本当だったとわかったから。", "自分も死んで、女と同じ世界に来たと気づいたから。", "百年は数えるものではなく、心が満たされたときに来るものだとわかったから。", "女はずっとそばにいて、待つ必要などなかったと気づいたから。", "露が落ちて百合がゆれたことが、女の返事のように感じられたから。", "百合の匂いが女の匂いのように感じられ、女が帰ってきたとわかったから。", "白い百合と暁の星がそろって、約束の朝が来たと感じたから。", "長い時間待ち続けた自分の心が、百合を見て満たされたから。", "百合が咲いたことで、女の魂が戻ってきたと気づいたから。", "時間を忘れて待っているうちに、もう百年が来ていたと知ったから。"];
+DEMO.forEach((r,i)=>{if(DEMO_Q1[i])r[1]=DEMO_Q1[i];if(DEMO_Q2[i])r[2]=DEMO_Q2[i];});
 
 /* ══ 時を進める ══ */
 const _pq=new THREE.Quaternion(),_pe=new THREE.Euler(0,0,0,'YXZ');
@@ -2560,8 +2574,8 @@ function catchShoot(){
  say(head,'だれかの言葉が流れてきました。<br><br>「'+esc(o.t)+'」<br><span style="color:#6b665c;font-size:11.5px">'+
   esc(o.n)+'・'+o.q+'</span><br><br>この一文の中に、どんな星（言葉）が光っているだろう。');}
 
-/* ══ ミッション（3ステップ）：重なり → 分かれ → 少数の読み → 書き直し ══
-   見上げると自動で始まる。ステップをこなすと、この活動で「何がわかるか」が一文ずつ手に入る。 */
+/* ══ ミッション（プリント②と同じ流れ）：問一の空で素敵な解答を2つ → 問二の空で2つ → 書き写して③新たな考えへ ══
+   見上げると自動で始まる。解答の「☆素敵」を押して選ぶ。 */
 let MS_ON=false,MI=0,MST='todo',MLEARN=[],FROM_SEARCH=false,MS_STARTED=false;
 const Wd=i=>WORDS[i]?WORDS[i].w:'';
 function topEdge(){let b=null;EDGES.forEach(e=>{if(stars[e.a].sp.visible&&stars[e.b].sp.visible&&(!b||e.n>b.n))b=e;});return b;}
@@ -2573,59 +2587,92 @@ function minorIdx(){return WORDS.map((w,i)=>i).filter(i=>WKIND[i]==='minor'||WOR
 function otherGroup(){const my=myGroup();let b=-1;
  GROUPS.forEach((G,k)=>{if(k===my||G.minor)return;if(b<0||G.members.length>GROUPS[b].members.length)b=k;});
  if(b<0)GROUPS.forEach((G,k)=>{if(b<0&&k!==my)b=k;});return b;}
+/* ── 素敵な解答（☆）：問いごとに2つまで ── */
+const FAV_KEY='yume_fav_v1',FAV_MAX=2;
+let FAV=[],LISTF=[];
+try{const a=JSON.parse(localStorage.getItem(FAV_KEY)||'[]');if(Array.isArray(a))FAV=a.filter(o=>o&&o.q&&o.txt);}catch(e){}
+function saveFav(){try{localStorage.setItem(FAV_KEY,JSON.stringify(FAV));}catch(e){}}
+const favKey=o=>o.q+'\u0002'+(o.name||'')+'\u0002'+o.txt;
+const favOf=q=>FAV.filter(o=>o.q===q);
+const isFav=o=>FAV.some(f=>favKey(f)===favKey(o));
+/* 一覧の一行に「☆素敵」ボタンをつける（o={q,name,txt:解答全文}） */
+function favBtn(o){const k=LISTF.push(o)-1,on=isFav(o);
+ return '<button class="fv'+(on?' on':'')+'" data-fav="'+k+'">'+(on?'★えらんだ':'☆素敵')+'</button>';}
+function toggleFav(k,btn){
+ const o=LISTF[k];if(!o)return;
+ if(isFav(o)){FAV=FAV.filter(f=>favKey(f)!==favKey(o));}
+ else{
+  if(favOf(o.q).length>=FAV_MAX){showNote((o.q==='q1'?'問一':'問二')+'はもう2つ選んでいます。入れかえるときは、ミッションの「×」で外そう。');return;}
+  FAV.push({q:o.q,name:o.name||'（なまえなし）',txt:o.txt});chime(-1,1318.5);}
+ saveFav();
+ if(btn){const on=isFav(o);btn.classList.toggle('on',on);btn.textContent=on?'★えらんだ':'☆素敵';}
+ missionEvent({k:'fav'});renderMission();}
+function favLines(q){const a=favOf(q);
+ return [0,1].map(k=>{const o=a[k];
+  return '<li class="fl'+(o?'':' em')+'"><b class="tg">'+(q==='q1'?'問一':'問二')+(k?'②':'①')+'</b>'+
+   (o?esc(o.name)+'の読み：'+esc(o.txt.length>34?o.txt.slice(0,34)+'…':o.txt)+'<button class="fx" data-m="unfav" data-q="'+q+'" data-k="'+k+'">×</button>':'まだ選んでいません')+'</li>';}).join('');}
+function openCopySheet(){
+ const blk=q=>{const a=favOf(q);
+  return [0,1].map(k=>{const o=a[k];
+   return '<div class="sm"><h4>'+(q==='q1'?'問一':'問二')+'の空　'+(k?'②':'①')+'　（ニックネーム：'+(o?esc(o.name):'　　　　')+'）の読み</h4>'+
+    (o?'<p class="cp">'+esc(o.txt)+'</p>':'<p class="em">まだ選んでいません。</p>')+'</div>';}).join('');};
+ openSheet('プリントに書き写そう',
+  '<p class="em">プリントの「② 見る」に、選んだ解答を書き写そう。<br>書き写したら「▶ここが素敵！」の□に○をつけよう。</p>'+
+  blk('q1')+blk('q2')+
+  '<div class="sm"><h4>③ 新たな考え</h4><p class="em">夜空で出会った読みをふまえて、プリントの「③ 新たな考え」に、自分の新たな考えを書こう。</p></div>');}
 const MS=[
- {tag:'重なり',title:'みんなの読みが重なるところ',
-  t:'頭の真上の、大きく光る星をタップしよう。',
-  why:'多くの人が同じ言葉を使ったところは、クラスの読みの「共通の土台」です。',
-  ok:ev=>ev.k==='star'&&WORDS[ev.i]&&(WKIND[ev.i]==='core'||coreIdx().indexOf(ev.i)>=0),
-  learn:ev=>{const w=WORDS[ev.i];return '「'+w.w+'」は、'+PEOPLE+'人中'+w.n+'人が使った言葉。ここはクラスのみんなが共通して注目したところ。';},
-  hint:()=>{const i=coreIdx()[0];if(POS[i]){flyTo(POS[i]);showNote('真上の大きな星のほうへ向きを変えました。');}}},
- {tag:'分かれ',title:'自分とちがう読みのグループ',
-  t:'空に浮かぶグループ名のうち、自分のグループ以外を一つタップして、その人たちの答えを読もう。',
-  why:'同じ場面でも、読みはいくつかの方向に分かれます。ちがう読み方を知ると、自分の読みの特徴が見えてきます。',
-  ok:ev=>ev.k==='group'&&GROUPS[ev.g]&&(ev.g!==myGroup()||GROUPS.length<2),
-  learn:ev=>{const G=GROUPS[ev.g],my=myGroup();
-   return G.name+'は'+G.members.length+'人の読み。'+(my>=0&&GROUPS[my]?'自分は'+GROUPS[my].name+'。同じ場面でも、ちがう方向から読んでいる人たちがいる。':'クラスの読みは、いくつかの方向に分かれている。');},
-  hint:()=>{const g=otherGroup();if(g>=0&&GROUPS[g].label){flyTo(GROUPS[g].label.position);showNote('グループ名のほうへ向きを変えました。名前をタップしよう。');}}},
- {tag:'少数',title:'一人だけの読み',
-  t:'地平線に近い、小さな星を一つタップしよう。一人だけが使った言葉です。',
-  why:'少ない読みは「まちがい」ではありません。本文から根拠が言えれば、みんなの読みを広げる大切な読みです。',
-  ok:ev=>ev.k==='star'&&WORDS[ev.i]&&(WKIND[ev.i]==='minor'||WORDS[ev.i].n===1),
-  learn:ev=>'「'+Wd(ev.i)+'」は一人だけの読み。本文のどこからそう読めるのかを考えると、自分の読みも広がる。',
-  hint:()=>{const c=minorIdx();if(!c.length){showNote('一人だけの言葉は、いまの夜空にはありません。「とばす」で進もう。');return;}
-   flyTo(POS[c[Math.floor(Math.random()*c.length)]]);showNote('地平線に近い小さな星のほうへ向きを変えました。');}}
+ {tag:'問一',q:'q1',title:'問一の空で、素敵な解答を2つ見つけよう',
+  t:'星や線、「〜の読み」をタップすると、友だちの解答が読めます。素敵だと思った解答の「☆素敵」を押そう。',
+  why:'自分にはない視点？　本文の根拠がたしか？　言葉の選び方がいい？　どこが素敵かも考えながら選ぼう。',
+  ok:()=>favOf('q1').length>=FAV_MAX,
+  learn:()=>'問一：'+favOf('q1').map(o=>o.name+'の読み').join('・')+'を選んだ。',
+  hint:()=>{const i=coreIdx()[0];if(POS[i]){flyTo(POS[i]);showNote('大きな星をタップすると、その言葉を使った解答が読めます。');}}},
+ {tag:'問二',q:'q2',title:'問二の空で、素敵な解答を2つ見つけよう',
+  t:'雰囲気の変わった問二の空で、同じように解答を読み、素敵だと思った解答の「☆素敵」を押そう。',
+  why:'問一とはちがう読みにも出会えます。自分の考えとくらべながら選ぼう。',
+  ok:()=>favOf('q2').length>=FAV_MAX,
+  learn:()=>'問二：'+favOf('q2').map(o=>o.name+'の読み').join('・')+'を選んだ。',
+  hint:()=>{const g=otherGroup();if(g>=0&&GROUPS[g].label){flyTo(GROUPS[g].label.position);showNote('「〜の読み」をタップすると、そのグループの解答がならびます。');}
+   else{const i=coreIdx()[0];if(POS[i])flyTo(POS[i]);}}}
 ];
 function setFilterUI(f){document.querySelectorAll('#modes button[data-f]').forEach(o=>o.classList.toggle('on',o.dataset.f===f));}
 function renderMission(){
  const el=$('mission');if(!MS_ON){el.classList.remove('on');return;}
  el.classList.add('on');
- const dots=MS.map((m,k)=>'<i class="'+(k<MI||(k===MI&&MST==='done')?'d':k===MI?'c':'')+'"></i><span class="dl'+(k<=MI?' a':'')+'">'+m.tag+'</span>').join('')+
-  '<i class="'+(MI>=MS.length?'c':'')+'"></i><span class="dl'+(MI>=MS.length?' a':'')+'">新たな考え</span>';
+ const dots=MS.map((m,k)=>'<i class="'+(k<MI||(k===MI&&MST==='done')?'d':k===MI?'c':'')+'"></i><span class="dl'+(k<=MI?' a':'')+'">'+m.tag+'の空</span>').join('')+
+  '<i class="'+(MI>=MS.length?'c':'')+'"></i><span class="dl'+(MI>=MS.length?' a':'')+'">書き写す・新たな考え</span>';
  if(MI>=MS.length){
-  el.innerHTML='<div class="mh"><b>3つの発見</b><button data-m="close">×</button></div>'+
-   '<ol>'+MLEARN.map((s,k)=>s?'<li><b class="tg">'+MS[k].tag+'</b>'+esc(s)+'</li>':'').join('')+'</ol>'+
-   '<p class="ln cc">クラスの読みには「重なり」と「分かれ」と「少数の読み」がある。ほかの人の読みを知ると、自分の読みがどこにあるかがわかる。</p>'+
+  el.innerHTML='<div class="mh"><b>プリントに書き写そう</b><button data-m="close">×</button></div>'+
+   '<ol class="fv">'+favLines('q1')+favLines('q2')+'</ol>'+
+   '<p class="ln">選んだ解答を、プリントの「② 見る」に書き写し、「▶ここが素敵！」の□に○をつけよう。</p>'+
    '<p class="ok" style="font-size:13px">さいごに：新たな考えを書こう</p><p class="ln">夜空で出会った読みをふまえて、プリントの「③ 新たな考え」に書こう。</p>'+
-   '<div class="mr"><button data-m="myans" class="y">わたしの答えを見る</button><button data-m="sum">まとめ</button></div><div class="md">'+dots+'</div>';
+   '<div class="mr"><button data-m="copy" class="y">書き写す画面を開く</button><button data-m="myans">わたしの答え</button></div><div class="md">'+dots+'</div>';
   return;}
  const m=MS[MI];let body,btns;
+ const go=QMODE!==m.q?'<button data-m="goq" class="y">'+m.tag+'の空へ移る</button>':'';
  if(MST==='done'){
-  body='<p class="ok">発見！</p><p class="ln">'+esc(MLEARN[MI]||'')+'</p>';
-  btns='<button data-m="next" class="y">'+(MI+1<MS.length?'つぎのステップへ':'しめくくりへ')+'</button>';}
+  body='<p class="ok">2つ選べた！</p><ol class="fv">'+favLines(m.q)+'</ol>';
+  btns='<button data-m="next" class="y">'+(MI+1<MS.length?'問二の空へ進む':'書き写しへ進む')+'</button>';}
  else{
-  body='<p class="mt">'+esc(m.title)+'</p><p>'+esc(m.t)+'</p><p class="why">'+esc(m.why)+'</p>';
-  btns='<button data-m="hint">ヒント</button><button data-m="skip">とばす</button>';}
- el.innerHTML='<div class="mh"><b>ステップ '+(MI+1)+'／'+MS.length+'　'+m.tag+'</b><button data-m="close">×</button></div>'+body+
+  body='<p class="mt">'+esc(m.title)+'</p><p>'+esc(m.t)+'</p><p class="why">'+esc(m.why)+'</p><ol class="fv">'+favLines(m.q)+'</ol>';
+  btns=go+'<button data-m="hint">ヒント</button><button data-m="skip">とばす</button>';}
+ el.innerHTML='<div class="mh"><b>ステップ '+(MI+1)+'／'+(MS.length+1)+'　'+m.tag+'の空　'+favOf(m.q).length+'／'+FAV_MAX+'</b><button data-m="close">×</button></div>'+body+
   '<div class="mr">'+btns+'</div><div class="md">'+dots+'</div>';}
 function missionEvent(ev){
- if(!MS_ON||MI>=MS.length||MST==='done')return;
+ if(!MS_ON||MI>=MS.length)return;
  const m=MS[MI];
- if(m.ok(ev)){MST='done';MLEARN[MI]=m.learn(ev);chime(-1,1046.5);renderMission();}}
+ if(MST!=='done'&&m.ok(ev)){MST='done';MLEARN[MI]=m.learn(ev);chime(-1,1046.5);renderMission();}
+ else if(MST==='done'&&!m.ok(ev)){MST='todo';renderMission();}}
 $('mission').addEventListener('click',e=>{
  const b=e.target.closest('[data-m]');if(!b)return;const k=b.dataset.m;
  if(k==='close'){MS_ON=false;toolOn('mission',false);renderMission();return;}
- if(k==='hint')MS[MI].hint();
- if(k==='skip'||k==='next'){MI++;MST='todo';closeInfo();}
+ if(k==='unfav'){const o=favOf(b.dataset.q)[+b.dataset.k];if(o){FAV=FAV.filter(f=>f!==o);saveFav();}
+  if(MI<MS.length&&MST==='done'&&!MS[MI].ok())MST='todo';renderMission();return;}
+ if(k==='goq'){setQMode(MS[MI].q);renderMission();return;}
+ if(k==='hint'){if(QMODE!==MS[MI].q){setQMode(MS[MI].q);renderMission();return;}MS[MI].hint();}
+ if(k==='skip'||k==='next'){MI++;MST='todo';closeInfo();
+  if(MI<MS.length){if(QMODE!==MS[MI].q)setQMode(MS[MI].q);if(MS[MI].ok())MST='done';}}
+ if(k==='copy'){openCopySheet();return;}
  if(k==='sum'){openSummary();return;}
  if(k==='myans'){showMyAnswer();return;}
  if(k==='again'){MI=0;MST='todo';MLEARN=[];}
@@ -2665,7 +2712,7 @@ function openSummary(){
   (ACT.some(p=>p.rev)?'新たな考えを送った人：'+ACT.filter(p=>p.rev).length+'人\n':'')+
   (GROUPS.length?'読みのグループ：'+GROUPS.map(G=>G.name+'('+G.members.length+'人)').join('、')+'\n':'')+
   (ones.length?'一人だけの言葉：'+ones.map(o=>o.w.w).join('、')+'\n':'')+
-  (learned.length?'\n【ミッションでわかったこと】\n'+learned.map((s,k)=>(k+1)+'. '+s).join('\n')+'\n':'')+
+  (learned.length?'\n【えらんだ素敵な解答】\n'+learned.map((s,k)=>(k+1)+'. '+s).join('\n')+'\n':'')+
   '\n【わかったことを書いてみよう】\n'+frames.map((s,k)=>(k+1)+'. '+s).join('\n');
  const revs=ACT.filter(p=>p.rev),addTop=WORDS.map((w,i)=>({w:w,i:i})).filter(o=>o.w.added>0).sort((a,b)=>b.w.added-a.w.added).slice(0,6);
  const revHtml='<div class="sm"><h4>③ 新たな考え</h4>'+(revs.length?'<p class="sl">'+revs.length+'人が新たな考えを送りました。新たな考えで増えた言葉：</p><div class="rl">'+
@@ -2687,7 +2734,7 @@ function openSummary(){
    g.slice(0,5).map(i=>chip({w:WORDS[i],i:i})).join('')+'</div>').join('')+'</div>':'')+
   grpHtml+
   (ones.length?'<div class="sm"><h4>一人だけの読み</h4><div class="rl">'+ones.map(chip).join('')+'</div></div>':'')+
-  (learned.length?'<div class="sm"><h4>ミッションでわかったこと</h4><ol class="fr">'+learned.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></div>':'')+
+  (learned.length?'<div class="sm"><h4>えらんだ素敵な解答</h4><ol class="fr">'+learned.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></div>':'')+
   '<div class="sm"><h4>わかったことを書いてみよう</h4><ol class="fr">'+frames.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol>'+
    '<p class="em">（　　　　）に自分の考えを入れて、プリントに書き写そう。</p></div>'+
   revHtml+
@@ -2703,8 +2750,8 @@ $('shB').addEventListener('click',e=>{
  if(e.target.closest('[data-copy]'))copySummary();});
 
 /* ══ 問題文 ══ */
-const QDEF={q1:'問一　「自分は女にだまされたのではなかろうか」と思い始めたときの「自分」の心情',
-            q2:'問二　「白い百合」は何を表していると考えられるか'};
+const QDEF={q1:'問一　女はなぜ「百年待っていてください。」と言ったのか、できる限り詳しく説明しましょう。',
+            q2:'問二　男はなぜ「百年はもう来ていたんだな。」と気づいたのか、できる限り詳しく説明しましょう。'};
 let QTEXT=Object.assign({},QDEF);
 try{const o=JSON.parse(localStorage.getItem('yume_q_v1')||'null');if(o&&o.q1&&o.q2)QTEXT=o;}catch(e){}
 function setQText(a,b){
@@ -3137,8 +3184,8 @@ function addNebulae(){
 DEMO_ON=!!window.__DEMO||(()=>{try{return new URLSearchParams(location.search).has('demo');}catch(e){return false;}})();
 if(DEMO_ON){
  const NICKS=['ほし','つき','そら','ゆめ','はな','かぜ','あめ','ゆき','ひかり','うみ','もり','くも','つばさ','こはく','るり','あかね','しずく','みお','すず','なぎ'];
- const ADD1=['正直えぐいと思った。','','百年は長すぎてつらい。','','','さびしくてこわくなった。','','','','','','','やばいくらい不安。','','','','','','',''];
- const ADD2=['','とてもせつない。','','','きれいで、はかない。','','','','','','うつくしい花だと思う。','','','','','','','','',''];
+ const ADD1=['百年は正直えぐい長さだ。','','','','','','','','','さびしくてこわかったのだと思う。','','つらい気持ちもあったはず。','','','','','','','',''];
+ const ADD2=['とてもせつない。','','','きれいで、はかない夜明け。','','','','','うれしかったと思う。','','','','','','','','','','',''];
  posts=DEMO.map((r,i)=>({name:NICKS[i],nm:NICKS[i],no:String(i+1),cls:'1組',q1:r[1]+(ADD1[i]||''),q2:r[2]+(ADD2[i]||''),mine:false}));
  seen.clear();posts.forEach(p=>{seen.add(keyOf(p));p.mine=isMine(p);});
  NAME_ASKED=true;}
