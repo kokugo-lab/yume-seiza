@@ -313,6 +313,7 @@ ol.fr li{margin-bottom:6px}
 <style>
 #mebtn{left:12px;top:calc(52px + env(safe-area-inset-top));font-size:11.5px;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #spk{left:auto;right:auto;left:calc(12px + 84px);top:calc(12px + env(safe-area-inset-top));padding:7px 12px}
+#rot{left:calc(12px + 84px + 52px);top:calc(12px + env(safe-area-inset-top));padding:7px 12px;font-size:12px;letter-spacing:.04em}
 #namebox{position:fixed;inset:0;z-index:13;display:none;align-items:center;justify-content:center;background:rgba(5,7,15,.6);padding:20px}
 #namebox.on{display:flex}
 #namebox .w{background:rgba(246,244,238,.97);border-radius:12px;padding:18px;width:min(380px,100%);color:var(--sumi)}
@@ -401,6 +402,7 @@ ol.fr li{margin-bottom:6px}
   <button class="btn" id="recenter" style="display:none">正面に直す</button>
   <button class="btn" id="mebtn">名前を入れる</button>
   <button class="btn" id="spk">🔇</button>
+  <button class="btn" id="rot" aria-label="向きを90度回す">↻ 90°</button>
   <div id="counter"></div>
   <div id="modes">
     <button data-f="all" class="on">すべて</button>
@@ -565,7 +567,12 @@ function setOrientQ(q,a,b,g,o){_e.set(b,a,-g,'YXZ');q.setFromEuler(_e);q.multipl
 const D=d=>(d||0)*Math.PI/180;
 function onOrient(e){if(e.alpha===null)return;
   const ang=((screen.orientation&&typeof screen.orientation.angle==='number')?screen.orientation.angle:(window.orientation||0));
-  setOrientQ(deviceQ,D(e.alpha),D(e.beta),D(e.gamma),D(ang));gyroActive=true;}
+  setOrientQ(deviceQ,D(e.alpha),D(e.beta),D(e.gamma),D(ang+ROT));gyroActive=true;}
+/* 端末によって90度横にずれるときの手動補正（↻ボタンで90度ずつ。端末に保存） */
+let ROT=0;try{ROT=(+localStorage.getItem('yume_rot_v1')||0)%360;}catch(e){}
+$('rot').addEventListener('click',e=>{e.stopPropagation();
+  ROT=(ROT+90)%360;try{localStorage.setItem('yume_rot_v1',String(ROT));}catch(err){}
+  showNote('向きを90度回しました（いま '+ROT+'°）。まっすぐになるまで押してください。');});
 const note=$('note');let noteT;
 function showNote(t){note.textContent=t;note.classList.add('on');clearTimeout(noteT);
   noteT=setTimeout(()=>note.classList.remove('on'),5200);}
