@@ -238,6 +238,12 @@ ol.fr li{margin-bottom:6px}
 .rip{position:fixed;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:2px solid rgba(232,200,106,.95);
   pointer-events:none;z-index:30;animation:rip .55s ease-out forwards}
 @keyframes rip{from{transform:scale(.3);opacity:1}to{transform:scale(1.7);opacity:0}}
+#dawnfx{position:fixed;inset:0;z-index:13;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:22vh;opacity:0;transition:opacity 1.4s}
+#dawnfx.on{opacity:1}
+#dawnfx .dt{margin:0;font-size:clamp(30px,9vw,54px);letter-spacing:.5em;padding-left:.5em;color:#fff6e4;font-weight:400;
+ text-shadow:0 0 18px rgba(255,214,150,.9),0 0 42px rgba(255,190,120,.6);transform:translateY(10px);transition:transform 3s ease-out,letter-spacing 3s ease-out}
+#dawnfx.on .dt{transform:none;letter-spacing:.32em}
+#dawnfx .ds{margin:14px 0 0;font-size:13px;letter-spacing:.2em;color:#f4e6cc;text-shadow:0 0 10px rgba(0,0,0,.6)}
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:12;transition:opacity .45s}
 #fade.on{opacity:1}
 #plname{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:7;pointer-events:none;
@@ -435,7 +441,6 @@ ol.fr li{margin-bottom:6px}
     <button data-k="summary">まとめ</button>
     <button data-k="place">場所</button>
     <button data-k="rank">順位</button>
-    <button data-k="hundred">百年</button>
   </div>
 </div>
 <div id="namebox"><div class="w">
@@ -456,6 +461,7 @@ ol.fr li{margin-bottom:6px}
 </div>
 
 <div id="note"></div>
+<div id="dawnfx"><p class="dt">暁 の 星</p><p class="ds">百年を待つ空に、たった一つ、星がともる。</p></div>
 <div id="tell"><div><b id="tellt"></b><p id="tellb"></p><small>タップで閉じる</small></div></div>
 
 <div id="post"><div class="w">
@@ -636,7 +642,8 @@ $('tell').addEventListener('click',e=>{
  const fv=e.target.closest('[data-fav]');if(fv){e.stopPropagation();toggleFav(+fv.dataset.fav,fv);return;}
  const ac=e.target.closest('[data-act]');
  $('tell').classList.remove('on');
- if(ac&&ac.dataset.act==='hundred'&&typeof startHundred==='function')startHundred();});
+ if(ac&&ac.dataset.act==='hundred'&&typeof startHundred==='function')startHundred();
+ if(ac&&ac.dataset.act==='endhundred'){stopHundred();goPlace(QPLACE[QMODE]);}});
 $('htext').addEventListener('click',()=>$('htext').classList.toggle('min'));
 function setHud(a){$('htext').innerHTML=a.map(s=>'<span>'+s+'</span>').join('');}
 
@@ -1642,6 +1649,7 @@ function enterSky(){
   if(!myId()&&!NAME_ASKED&&(posts.length||feedOn)){NAME_ASKED=true;setTimeout(()=>{if(inSky)askName();},900);}
  if(!posts.length)showNote('まだ回答がありません。「夜空へ送る」から問一・問二を打ちこむか、先生用の取りこみを使ってください。');}
 function toTitle(){
+ if(HLOCK()||DAWN_ON){lockNote();return;}
  closeAll();cancelDraw();setTool('');stopTour();closeSheet();closeInfo();
  if(soundOn){soundOn=false;ambStop();}
  $('hud').classList.remove('show');skyG.visible=true;
@@ -1687,7 +1695,7 @@ document.querySelectorAll('#modes button[data-t]').forEach(b=>{
 function onTap(x,y){
  if(!inSky)return;
  ripple(x,y);
- if(H.on&&H.stage===0){if(H.day<99){H.day=99;H.ph=.999;}return;}
+ if(HLOCK()||DAWN_ON)return;
  {const now=performance.now();if(now-LT.t<330&&Math.hypot(x-LT.x,y-LT.y)<44){LT.t=0;dblTap(x,y);return;}LT={t:now,x:x,y:y};}
  if(tryCatchShoot(x,y))return;
  const lp=pickLand(x,y);
@@ -1954,13 +1962,16 @@ const sun=new THREE.Sprite(new THREE.SpriteMaterial({map:SUN_TEX,transparent:tru
  blending:THREE.AdditiveBlending}));sun.scale.setScalar(120);sun.visible=false;sun.renderOrder=-1;scene.add(sun);
 function kan(n){if(n>=100)return '百';const d='〇一二三四五六七八九',t=Math.floor(n/10),o=n%10;
  return ((t?(t>1?d[t]:'')+'十':'')+(o?d[o]:''))||'〇';}
+/* 百年の物語の最中（百合が咲いて言葉が出るまで）は、スキップ・移動できない */
+function HLOCK(){return H.on&&!H.said;}
+function lockNote(){showNote('いまは百年の物語のとちゅうです。最後まで見とどけよう。');}
 function startHundred(){
  stopHundred(true);closeInfo();closeSheet();stopTour();toolOn('hundred',true);
  goPlace(GRAVE_IDX,()=>{
   Object.assign(H,{on:true,day:0,ph:0,dur:1.1,stage:0,u:0,said:false});
   sun.visible=true;sun.material.opacity=1;$('days').classList.add('on');$('days').textContent='勘定　〇';
   flyTo(new THREE.Vector3(0,.3,1));
-  showNote('日が東から出て、西へ落ちるたびに「一つ」と勘定する。（画面をタップすると先へ進む）');});}
+  showNote('日が東から出て、西へ落ちるたびに「一つ」と勘定する。');});}
 function stopHundred(quiet){
  H.on=false;sun.visible=false;$('days').classList.remove('on');toolOn('hundred',false);
  if(H.lily){world.remove(H.lily.g);H.lily=null;}
@@ -2034,7 +2045,7 @@ function stepHundred(dt){
   domeMesh.material.uniforms.a.value.setHex(P.sky[0]).lerp(_c2.setHex(0x0f1a40),q);
   domeMesh.material.uniforms.b.value.setHex(P.sky[1]).lerp(_c2.setHex(0x6e4660),q);}
  if(u>8.2&&!H.said){H.said=true;$('days').textContent='百年';
-  say('「百年はもう来ていたんだな」','石の下から伸びた茎の先で、真白な百合が花を開きました。遠い空には、暁の星がたった一つ瞬いています。<br><br>あなたは、この白い百合を何だと読みましたか。夜空の言葉と見くらべてみよう。');}}
+  say('「百年はもう来ていたんだな」','石の下から伸びた茎の先で、真白な百合が花を開きました。遠い空には、暁の星がたった一つ瞬いています。<br><br>あなたは、この白い百合を何だと読みましたか。夜空の言葉と見くらべてみよう。<br><button class="tlb" data-act="endhundred">もとの夜空へもどる</button>');}}
 
 /* ── 星座を書き出す ── */
 function exportConsts(){
@@ -2071,7 +2082,7 @@ function showGuide(){
   '指でなぞると見回せます。二本の指でひろげると拡大できます。<br>ときどき流れ星が飛んできます。タップすると、だれかの一文が届きます。<br><br>'+
   '右の道具<br>場所：野原・女の墓・浜・百合の野・雪の夜・暁の丘へ行く<br>さがす：言葉の星へ向かう　順位：よく使われた言葉<br>'+
   'ミッション：夜空を見る視点を順にこなす　まとめ：わかったことを文にする<br>'+
-  '星めぐり：大きな星を順に案内　百年：日を勘定して待つ<br>拡大・縮小　音：場所ごとの夜の音と、タップの鈴<br>星座の「▶ 鳴らす」：星の大きさに応じた音で、星座が旋律になる<br>回答が届くと、地平線から彗星が飛んできて言葉の星に分かれます<br><br>'+
+  '星めぐり：大きな星を順に案内　百年：流れ星を五つ集めると、日を勘定して待つ<br>拡大・縮小　音：場所ごとの夜の音と、タップの鈴<br>星座の「▶ 鳴らす」：星の大きさに応じた音で、星座が旋律になる<br>回答が届くと、地平線から彗星が飛んできて言葉の星に分かれます<br><br>'+
   '地面の花や百合をタップすると、ふわりと浮き上がります。墓の星の破片や真珠貝をタップすると、本文が読めます。');}
 
 $('tools').addEventListener('click',e=>{
@@ -2084,7 +2095,7 @@ $('tools').addEventListener('click',e=>{
  if(k==='summary')openSummary();
  if(k==='lines')setLines(!LINES_ON);
  if(k==='tour'){tour?stopTour():startTour();}
- if(k==='hundred'){H.on?stopHundred():startHundred();}
+ if(k==='hundred'){if(!H.on)startHundred();}
  if(k==='zin')setFov(camera.fov/1.25);
  if(k==='zout')setFov(camera.fov*1.25);
  if(k==='sound'){soundOn=!soundOn;toolOn('sound',soundOn);
@@ -2522,6 +2533,7 @@ function applyPlaceInner(i,quiet){
  try{localStorage.setItem('yume_place_v1',String(i));}catch(e){}
  if(!quiet){const t=$('plname');t.textContent=P.n;t.classList.remove('on');void t.offsetWidth;t.classList.add('on');}}
 function goPlace(i,cb){
+ if(HLOCK()||DAWN_ON){lockNote();return;}
  if(i===PLACE&&LAND){if(cb)cb();return;}
  $('fade').classList.add('on');
  setTimeout(()=>{applyPlace(i);$('fade').classList.remove('on');if(cb)setTimeout(cb,300);},480);}
@@ -2529,7 +2541,7 @@ function openPlace(){
  openSheet('場所をかえる',PLACES.map((P,i)=>'<button class="pc'+(i===PLACE?' on':'')+'" data-pl="'+i+'"><b>'+P.n+
   '</b><span>'+P.d+'</span></button>').join(''));}
 $('shB').addEventListener('click',e=>{
- const pl=e.target.closest('[data-pl]');if(pl){closeSheet();if(H.on)stopHundred();goPlace(+pl.dataset.pl);}});
+ const pl=e.target.closest('[data-pl]');if(pl){closeSheet();if(HLOCK()){lockNote();return;}if(H.on)stopHundred();goPlace(+pl.dataset.pl);}});
 
 /* 指がふれたしるし（反応したかどうかが目で分かる） */
 function ripple(x,y){const d=document.createElement('div');d.className='rip';d.style.left=x+'px';d.style.top=y+'px';
@@ -2628,8 +2640,70 @@ function catchShoot(){
  if(caught===5)msg+='<br><br><b style="display:inline;color:#b8860b">五つ集めた！</b>　ごほうびに、百年の物語が見られます。<br><button class="tlb" data-act="hundred">百合が咲くのを見る</button>';
  else if(caught===10)msg+='<br><br><b style="display:inline;color:#b8860b">十（とお）集めた！</b>　東の空に、暁の星がともりました。これからずっと、あなたの空で瞬きます。';
  else if(caught<10){const nx=caught<5?5:10;msg+='<br><br><span style="color:#6b665c;font-size:11px">あと'+'〇一二三四五六七八九'[nx-caught]+'つで'+(nx===5?'百年の物語':'暁の星')+'</span>';}
+ if(caught===10&&!DAWN_STAR){dawnCinematic(()=>say(head,msg));return;}
  if(caught>=10)dawnStar();
  say(head,msg);}
+/* ── 暁の星がともる（十集めたとき一度だけの演出） ──
+   東の空へ向きを変える → 夜の色がほどけて東が白む → 光の筋が走り、星がともる → 金の粉が舞う → 題字 */
+var DAWN_ON=false;let DRAY_TEX=null,DRING_TEX=null;
+function dawnCinematic(done){
+ if(DAWN_ON)return;DAWN_ON=true;closeInfo();closeSheet();stopTour();
+ if(!DRAY_TEX)DRAY_TEX=mkTex((c,s)=>{const g=c.createLinearGradient(0,0,s,0);
+  g.addColorStop(0,'rgba(255,240,210,0)');g.addColorStop(.5,'rgba(255,248,230,1)');g.addColorStop(1,'rgba(255,240,210,0)');
+  c.fillStyle=g;const m=s/2;for(let y=0;y<s;y++){const a=Math.exp(-Math.pow((y-m)/(s*.018),2));if(a<.004)continue;c.globalAlpha=a;c.fillRect(0,y,s,1);}
+  c.globalAlpha=1;},256);
+ if(!DRING_TEX)DRING_TEX=mkTex((c,s)=>{const g=c.createRadialGradient(s/2,s/2,s*.36,s/2,s/2,s*.5);
+  g.addColorStop(0,'rgba(255,236,200,0)');g.addColorStop(.55,'rgba(255,240,215,.9)');g.addColorStop(1,'rgba(255,236,200,0)');
+  c.fillStyle=g;c.fillRect(0,0,s,s);},256);
+ const C=dirOf(95,14).multiplyScalar(700),add=(tex,col,sc,op)=>{const m=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,color:col,transparent:true,
+  depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending,opacity:op||0}));m.position.copy(C);m.scale.setScalar(sc||1);m.renderOrder=6;world.add(m);return m;};
+ const core=add(STAR_TEX,0xfff6e6,1),halo=add(STAR_TEX,0xffd9a0,1),ring=add(DRING_TEX,0xffe8c0,1),ring2=add(DRING_TEX,0xffd0a0,1);
+ const rays=[];for(let k=0;k<12;k++){const r=add(DRAY_TEX,k%2?0xffe2b0:0xfff4dc,1);r.material.rotation=k*Math.PI/12;rays.push(r);}
+ const streak=add(DRAY_TEX,0xfff0d0,1);
+ /* 金の粉 */
+ const N=140,pg=new THREE.BufferGeometry(),pp=new Float32Array(N*3),pv=[];
+ for(let k=0;k<N;k++){pp.set([C.x,C.y,C.z],k*3);const v=new THREE.Vector3(Math.random()-.5,Math.random()-.3,Math.random()-.5).normalize().multiplyScalar(40+Math.random()*120);pv.push(v);}
+ pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+ const pts=new THREE.Points(pg,new THREE.PointsMaterial({map:STAR_TEX,color:0xffe0a0,size:9,transparent:true,depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));
+ pts.renderOrder=6;world.add(pts);
+ const P=PLACES[PLACE],A0=new THREE.Color(P.sky[0]),B0=new THREE.Color(P.sky[1]),A1=new THREE.Color(0x1a2a5c),B1=new THREE.Color(0xe0a27a);
+ const fx=$('dawnfx');
+ {const az=Math.atan2(-C.x,-C.z);let d=az-rig.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));
+  const el=Math.asin(C.y/C.length());
+  flyAnim={y0:rig.rotation.y,y1:rig.rotation.y+d,p0:pitch,p1:gyroActive?pitch:el*.9,t:0};}
+ if(gyroActive)showNote('東の空（地平線の少し上）を見てごらん。');
+ /* 音：低い和音 → 鈴の上行 → きらめき */
+ [261.63,329.63,392.0].forEach((f,k)=>setTimeout(()=>chime(-1,f),k*90));
+ [523.25,659.25,783.99,1046.5,1318.5,1567.98].forEach((f,k)=>setTimeout(()=>chime(-1,f),2200+k*170));
+ setTimeout(()=>{chime(-1,2093);chime(-1,1567.98);},3400);
+ const t0=performance.now(),E=x=>x<0?0:x>1?1:x*x*(3-2*x);
+ (function step(){
+  const t=(performance.now()-t0)/1000;
+  /* 0〜3秒：東の空が白む */
+  const sk=E(t/3)*(1-E((t-8)/2.5));
+  if(domeMesh){domeMesh.material.uniforms.a.value.copy(A0).lerp(A1,sk*.85);domeMesh.material.uniforms.b.value.copy(B0).lerp(B1,sk*.9);}
+  /* 1.8〜：光が集まる */
+  const g=E((t-1.8)/1.4);
+  halo.scale.setScalar(20+g*190+Math.sin(t*3)*6);halo.material.opacity=g*.38*(1-E((t-7)/2));
+  /* 3.2：ともる */
+  const ign=E((t-3.1)/.35),set=E((t-4.2)/2.2);
+  core.scale.setScalar(4+ign*(130-86*set));core.material.opacity=Math.min(1,g*.6+ign);
+  rays.forEach((r,k)=>{const L=ign*(620+160*Math.sin(k*1.7))*(1-set*.75);r.scale.set(L,L,1);
+   r.material.rotation=k*Math.PI/12+t*.05*(k%2?1:-1);r.material.opacity=ign*(.32-.24*set)*(1-E((t-7.5)/1.5));});
+  streak.scale.set(ign*1600*(1-set*.6),ign*1600*(1-set*.6),1);streak.material.opacity=ign*.42*(1-E((t-6)/2));
+  const rp=E((t-3.1)/2.6);ring.scale.setScalar(10+rp*1100);ring.material.opacity=(1-rp)*.5*ign;
+  const rp2=E((t-3.6)/3.2);ring2.scale.setScalar(10+rp2*1500);ring2.material.opacity=(1-rp2)*.32*ign;
+  /* 金の粉 */
+  const pt=Math.max(0,t-3.15);pts.material.opacity=Math.min(1,pt*3)*(1-E((t-7.4)/2));
+  for(let k=0;k<N;k++){const v=pv[k],d=1-Math.exp(-pt*.9);pp[k*3]=C.x+v.x*d*3;pp[k*3+1]=C.y+v.y*d*3-pt*pt*6;pp[k*3+2]=C.z+v.z*d*3;}
+  pg.attributes.position.needsUpdate=true;
+  /* 題字 */
+  if(t>4&&!fx.classList.contains('on')&&t<8)fx.classList.add('on');
+  if(t>8)fx.classList.remove('on');
+  if(t<10.5){requestAnimationFrame(step);return;}
+  [core,halo,ring,ring2,streak,pts].concat(rays).forEach(o=>{world.remove(o);if(o.geometry&&o!==core)o.geometry.dispose&&o.geometry.dispose();o.material.dispose();});
+  if(domeMesh){domeMesh.material.uniforms.a.value.copy(A0);domeMesh.material.uniforms.b.value.copy(B0);}
+  DAWN_ON=false;dawnStar();if(done)done();})();}
 function dawnStar(){
  if(DAWN_STAR)return;
  const dw=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xfff2d8,transparent:true,depthTest:false,
@@ -3086,7 +3160,7 @@ function stepIdle(dt){
  if(tour&&tour.auto0)tour.auto0=false;
  IDLE+=dt;
  if(FOVT!==null){setFov(camera.fov+(FOVT-camera.fov)*Math.min(1,dt*3));if(Math.abs(camera.fov-FOVT)<.3)FOVT=null;}
- const busy=H.on||tour||anyPanelOpen()||TOOL!==''||(MS_ON&&MI<MS.length);
+ const busy=H.on||DAWN_ON||tour||anyPanelOpen()||TOOL!==''||(MS_ON&&MI<MS.length);
  if(IDLE>12&&!busy){
   if(camera.fov<71)setFov(camera.fov+(72-camera.fov)*Math.min(1,dt*.8));
   if(!gyroActive&&!flyAnim&&Math.abs(pitch-1.15)>.12)flyAnim={y0:rig.rotation.y,y1:rig.rotation.y,p0:pitch,p1:1.15,t:0};}
@@ -3184,6 +3258,7 @@ function qBanner(){
  el.classList.remove('on');void el.offsetWidth;el.classList.add('on');}
 function setQMode(q){
  if(q===QMODE)return;
+ if(HLOCK()||DAWN_ON){lockNote();return;}
  QMODE=q;renderQTog();closeInfo();stopTour();closeSheet();
  $('fade').classList.add('on');
  setTimeout(()=>{
