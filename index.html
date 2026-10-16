@@ -312,6 +312,9 @@ ol.fr li{margin-bottom:6px}
 </style>
 <style>
 #mebtn{left:12px;top:calc(52px + env(safe-area-inset-top));font-size:11.5px;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tell .fv{padding:3px 12px;border-radius:999px;border:1px solid #c9a34a;background:#fffaf0;color:#8a6a1c;font:inherit;font-size:12px;letter-spacing:.06em;cursor:pointer}
+#tell .fv.on{background:#e8c86a;color:#241c08;border-color:#e8c86a;font-weight:600}
+#tell .tlb{margin-top:8px;padding:6px 14px;border-radius:999px;border:0;background:#e8c86a;color:#241c08;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 #spk{left:auto;right:auto;left:calc(12px + 84px);top:calc(12px + env(safe-area-inset-top));padding:7px 12px}
 #rot{left:calc(12px + 84px + 52px);top:calc(12px + env(safe-area-inset-top));padding:7px 12px;font-size:12px;letter-spacing:.04em}
 #namebox{position:fixed;inset:0;z-index:13;display:none;align-items:center;justify-content:center;background:rgba(5,7,15,.6);padding:20px}
@@ -629,7 +632,11 @@ $('recenter').addEventListener('click',()=>{
 
 /* ── ふきだし ── */
 function say(t,b){$('tellt').textContent=t;$('tellb').innerHTML=b;$('tell').classList.add('on');}
-$('tell').addEventListener('click',()=>$('tell').classList.remove('on'));
+$('tell').addEventListener('click',e=>{
+ const fv=e.target.closest('[data-fav]');if(fv){e.stopPropagation();toggleFav(+fv.dataset.fav,fv);return;}
+ const ac=e.target.closest('[data-act]');
+ $('tell').classList.remove('on');
+ if(ac&&ac.dataset.act==='hundred'&&typeof startHundred==='function')startHundred();});
 $('htext').addEventListener('click',()=>$('htext').classList.toggle('min'));
 function setHud(a){$('htext').innerHTML=a.map(s=>'<span>'+s+'</span>').join('');}
 
@@ -2530,6 +2537,10 @@ function ripple(x,y){const d=document.createElement('div');d.className='rip';d.s
 
 /* ── 流れ星：しばらくすると、いま見ている空へランダムに飛んでくる ── */
 let nextShoot=5+Math.random()*4,shootHint=false,caught=0;
+/* つかまえた流れ星の数は端末に保存（開き直しても続く） */
+const SHOOT_KEY='yume_shoot_v1';
+try{caught=Math.max(0,parseInt(localStorage.getItem(SHOOT_KEY)||'0',10)||0);}catch(e){}
+function saveShoot(){try{localStorage.setItem(SHOOT_KEY,String(caught));}catch(e){}}
 function shootingStar(){
  rig.updateMatrixWorld(true);
  const f=new THREE.Vector3();camera.getWorldDirection(f);
@@ -2558,6 +2569,7 @@ function stepShoots(dt){
   s.head.position.copy(s.pos);s.head.material.opacity=op;s.l.material.opacity=op;
   s.head.scale.setScalar(13+5*Math.sin(s.t*28));}
  if(!inSky)return;
+ if(caught>=10&&!DAWN_STAR)dawnStar();
  nextShoot-=dt;
  if(nextShoot<=0){
   shootingStar();
@@ -2569,17 +2581,61 @@ function tryCatchShoot(x,y){
  for(const s of shoots){if(s.dead||s.t<.05)continue;
   const a=toScr(s.pos,_pa);if(!a)continue;const b=toScr(s.tail,_pb);
   const d=b?segD(x,y,a[0],a[1],b[0],b[1]):Math.hypot(x-a[0],y-a[1]);
-  if(d<64){s.dead=true;flashAt(s.pos.clone().normalize().multiplyScalar(110));caught++;catchShoot();return true;}}
+  if(d<64){s.dead=true;flashAt(s.pos.clone().normalize().multiplyScalar(110));catchShoot();return true;}}
  return false;}
+/* ── 流れ星：自分のクラスの解答が流れてくる ──
+   ・夜空の星と同じ、自分のクラスの、いま開いている空（問一／問二）の解答
+   ・一文字だけ、極端に短い、同じ字のくり返し、テスト入力などは流さない
+   ・三つごと：めずらしい読み（自分のクラスであまり使われていない言葉の多い解答）
+   ・五つ：百年の物語（百合が咲く）へ招待　・十（とお）：空に暁の星がともる（以後ずっと） */
+function okAnswer(t){
+ t=String(t||'').replace(/\s+/g,'').trim();
+ if(t.length<12)return false;
+ const jp=(t.match(/[぀-ヿ㐀-鿿]/g)||[]).length;if(jp<8)return false;
+ if(new Set(t).size<6)return false;
+ if(/(.)\1{4,}/.test(t))return false;
+ if(/^(テスト|てすと|test|ｔｅｓｔ|あいうえお|ああ|わから|わかんな|特になし|とくになし|なし)/i.test(t))return false;
+ return true;}
+function shootPool(){
+ /* 夜空の星と同じ：自分のクラスの、いま開いている空（問一／問二）の解答。自分の解答は流さない */
+ const q=QMODE,seen=new Set(),a=[];
+ ACT.forEach(p=>{const t=p[q];if(!t||!okAnswer(t)||isMine(p))return;
+  const o={name:p.name||'（なまえなし）',q:q,t:String(t).trim()},k=o.name+'|'+o.t;
+  if(seen.has(k))return;seen.add(k);a.push(o);});
+ return a;}
+function rarity(o){const ws=[...new Set(tokenize(o.t))];if(!ws.length)return 1e9;
+ return ws.reduce((s,w)=>s+((w in INDEX)?WORDS[INDEX[w]].n:0),0)/ws.length;}
+let SHOOT_LAST='',DAWN_STAR=null;
 function catchShoot(){
+ caught++;saveShoot();
  chime(-1,1318.5);setTimeout(()=>chime(-1,1567.98),120);
- const all=[];
- posts.forEach(p=>[['問一',p.q1],['問二',p.q2]].forEach(o=>{if(o[1])all.push({q:o[0],t:o[1],n:p.name||'（なまえなし）'});}));
- const head='流れ星をつかまえた！（'+caught+'こ目）';
- if(!all.length){say(head,'まだ夜空に言葉がありません。');return;}
- const o=all[Math.floor(Math.random()*all.length)];
- say(head,'だれかの言葉が流れてきました。<br><br>「'+esc(o.t)+'」<br><span style="color:#6b665c;font-size:11.5px">'+
-  esc(o.n)+'・'+o.q+'</span><br><br>この一文の中に、どんな星（言葉）が光っているだろう。');}
+ const pool=shootPool(),QN=QMODE==='q1'?'問一':'問二';
+ const cnt=caught<10?kan(caught)+'つ目':(caught<100?kan(caught):caught)+'個目';
+ const head='流れ星をつかまえた！（'+cnt+'）';
+ const rare=caught%3===0;
+ let msg='';
+ if(!pool.length){msg='まだ、流れてくる'+QN+'の解答がありません。<br>クラスの友だちが答えると、流れ星に乗って流れてきます。';}
+ else{
+  let c=pool.filter(o=>o.name+'|'+o.t!==SHOOT_LAST);if(!c.length)c=pool;
+  if(rare)c=c.slice().sort((a,b)=>rarity(a)-rarity(b)).slice(0,Math.max(1,Math.min(3,c.length)));
+  const o=c[Math.floor(Math.random()*c.length)];SHOOT_LAST=o.name+'|'+o.t;
+  LISTF=[];const nm=o.name;
+  const fb=favBtn({q:o.q,name:nm,txt:o.t}).replace('class="fv','class="fv tl');
+  msg=(rare?'<span style="color:#b8860b;font-size:12px;letter-spacing:.1em">✦ めずらしい読み ✦　クラスであまり使われていない言葉が多い解答です。</span><br><br>':
+   'クラスの友だちの、'+QN+'の解答が流れてきました。<br><br>')+
+   '「'+esc(o.t)+'」<br><span style="color:#6b665c;font-size:11.5px">'+esc(nm)+'・'+QN+'</span><br><br>'+fb+
+   '<br><br>この一文の中に、どんな星（言葉）が光っているだろう。';}
+ if(caught===5)msg+='<br><br><b style="display:inline;color:#b8860b">五つ集めた！</b>　ごほうびに、百年の物語が見られます。<br><button class="tlb" data-act="hundred">百合が咲くのを見る</button>';
+ else if(caught===10)msg+='<br><br><b style="display:inline;color:#b8860b">十（とお）集めた！</b>　東の空に、暁の星がともりました。これからずっと、あなたの空で瞬きます。';
+ else if(caught<10){const nx=caught<5?5:10;msg+='<br><br><span style="color:#6b665c;font-size:11px">あと'+'〇一二三四五六七八九'[nx-caught]+'つで'+(nx===5?'百年の物語':'暁の星')+'</span>';}
+ if(caught>=10)dawnStar();
+ say(head,msg);}
+function dawnStar(){
+ if(DAWN_STAR)return;
+ const dw=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xfff2d8,transparent:true,depthTest:false,
+  blending:THREE.AdditiveBlending,opacity:.85}));
+ dw.position.copy(dirOf(95,14)).multiplyScalar(700);dw.scale.setScalar(44);dw.renderOrder=3;world.add(dw);DAWN_STAR=dw;
+ (function tw(){if(!DAWN_STAR)return;DAWN_STAR.material.opacity=.7+.25*Math.sin(Date.now()/420);requestAnimationFrame(tw);})();}
 
 /* ══ ミッション（プリント②と同じ流れ）：問一の空で素敵な解答を2つ → 問二の空で2つ → 書き写して③新たな考えへ ══
    見上げると自動で始まる。解答の「☆素敵」を押して選ぶ。 */
