@@ -3413,6 +3413,12 @@ function vrDrawPanel(){
  let y=pad+156;
  g.strokeStyle='rgba(107,102,92,.35)';g.lineWidth=2;g.beginPath();g.moveTo(pad,y);g.lineTo(W-pad,y);g.stroke();y+=18;
  P.hot=[];
+ /* 閉じるボタン（右上） */
+ {const bx=W-pad-230,by=pad-4,bw=230,bh=84,pr=(VR.hot==='close')?VR.ht/VR_PRESS:0;
+  g.fillStyle='#2b4a6f';rrect(g,bx,by,bw,bh,42);g.fill();
+  if(pr>0){g.save();rrect(g,bx,by,bw,bh,42);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
+  g.fillStyle='#fff';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText('✕ 閉じる',bx+bw/2,by+bh/2+2);g.textAlign='left';g.textBaseline='top';
+  P.hot.push({id:'close',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>vrClosePanel()});}
  const who=w.who||[],pages=Math.max(1,Math.ceil(who.length/VRP.PER));
  P.page=Math.max(0,Math.min(pages-1,P.page));
  const rowH=228;
@@ -3505,7 +3511,7 @@ const FRAG_TEX=mkTex((g,s)=>{const c=s/2;
  pts.forEach((p,i)=>i?g.lineTo(p[0]*s,p[1]*s):g.moveTo(p[0]*s,p[1]*s));g.closePath();
  const f=g.createLinearGradient(0,s*.2,0,s*.8);f.addColorStop(0,'#fffbe8');f.addColorStop(1,'#e8c86a');g.fillStyle=f;g.fill();},128);
 const FR={list:[],yaw:null,gaze:-1,t:0,cap:null,fly:[]};
-const FR_HOLD=1.8,FR_EL=-.6,FR_R=30;
+const FR_HOLD=3.4,FR_EL=-.6,FR_R=30;
 const FR_CAP=(function(){const cv=document.createElement('canvas');cv.width=1024;cv.height=300;const tx=new THREE.CanvasTexture(cv);
  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
  sp.scale.set(20,20*300/1024,1);sp.renderOrder=996;sp.visible=false;scene.add(sp);return {cv:cv,g:cv.getContext('2d'),tx:tx,sp:sp,key:''};})();
@@ -3526,7 +3532,7 @@ function fragCap(f,k){const C=FR_CAP,g=C.g,W=1024,H=300;
  ls.forEach((l,m)=>g.fillText(l,36,84+m*56));
  g.fillStyle='rgba(223,230,245,.18)';rrect(g,36,H-52,W-72,16,8);g.fill();
  if(k>0){g.fillStyle='#e8c86a';rrect(g,36,H-52,(W-72)*k,16,8);g.fill();}
- g.fillStyle='#9fb0c8';g.font='500 28px '+VRF;g.textAlign='right';g.fillText('見つめつづけると外れる',W-36,24);
+ g.fillStyle='#9fb0c8';g.font='500 28px '+VRF;g.textAlign='right';g.fillText('見つめつづけると外れる（約3秒）',W-36,24);
  C.tx.needsUpdate=true;}
 /* 足もとに並べる（ゆっくり遅れてついてくる）。見つめた一つを返す */
 function fragStep(dt){
