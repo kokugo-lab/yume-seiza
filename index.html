@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文でうなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -3485,7 +3485,7 @@ function vrOpen(i){
  mesh.up.copy(_cu);mesh.lookAt(0,0,0);
  scene.add(mesh);
  const first=!VR.hinted;VR.hinted=true;
- VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],msg:first?'うなずく＝☆素敵　首を2往復振る＝外す':'',ok:true,msgT:first?performance.now()+5000:0};
+ VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],msg:first?'うなずく2回＝☆素敵　首を2往復振る＝外す':'',ok:true,msgT:first?performance.now()+5000:0};
  vrDrawPanel();
  if(first){const P0=VR.panel;setTimeout(()=>{if(VR.panel===P0)vrDrawPanel();},5100);}
  try{if(typeof bell==='function'&&soundOn)bell(i);}catch(e){}
@@ -3583,7 +3583,7 @@ function vrRedrawAll(){if(VR.panel)vrDrawPanel();}
 /* ── 頭のジェスチャー（ためし）：うなずく＝☆素敵をつける／首を横に振る＝素敵を外す ──
    向きの変化だけを見る。いま見つめている文（札の行）か、足もとのかけらが対象。
    動きの始まりに見ていたものを対象にする（うなずくと視線が下へずれるため）。 */
-const HEAD={A_NOD:.13,R_NOD:.09,A_SWING:.11,SWINGS:4,OTHER:.14,WIN:1.8,NODWIN:1.1,COOL:1.1,s:[],tg:[],cool:0,row:-1};
+const HEAD={A_NOD:.09,TOL:.05,A_SWING:.11,SWINGS:4,OTHER:.14,WIN:1.8,COOL:1.1,s:[],tg:[],cool:0,row:-1};
 function headTarget(){
  if(FR.gaze>=0&&FR.list[FR.gaze])return {t:'frag',k:FR.list[FR.gaze].k};
  const P=VR.panel,hp=P&&vrPanelHit();
@@ -3601,9 +3601,13 @@ function swings(Y,A){/* 左右の振れの数（A以上の振れだけ数える�
   else if(d===1){if(v>e)e=v;else if(e-v>=A){d=-1;e=v;n++;}}
   else{if(v<e)e=v;else if(v-e>=A){d=1;e=v;n++;}}}
  return n;}
-function nodDown(P){/* 下を向いて（ピッチが下がり）、戻った */
- let m=0;for(let i=1;i<P.length;i++)if(P[i]<P[m])m=i;
- return m>0&&m<P.length-1&&(P[0]-P[m])>=HEAD.A_NOD&&(P[P.length-1]-P[m])>=HEAD.R_NOD;}
+function nodTwice(P,A,tol){/* 下→上→下→上（2回のうなずき）。最後に、はじめの高さ（±tol）へ戻っていること。始まりの位置を返す */
+ let e=P[0],ti=0,d=0,n=0,start=0;
+ for(let i=1;i<P.length;i++){const v=P[i];
+  if(d===0){if(v>e){e=v;ti=i;}else if(e-v>=A){d=-1;start=e;e=v;n=1;}}
+  else if(d===-1){if(v<e)e=v;else if(v-e>=A){d=1;e=v;n++;}}
+  else{if(v>e)e=v;else if(e-v>=A){d=-1;e=v;n++;}}}
+ return (n>=4&&Math.abs(P[P.length-1]-start)<=tol)?ti:-1;}
 function headReset(){HEAD.s=[];HEAD.tg=[];HEAD.row=-1;}
 function headHint(t,ok){const P=VR.panel;if(!P)return;P.msg=t;P.ok=ok!==false;P.msgT=performance.now()+2600;vrDrawPanel();
  setTimeout(()=>{if(VR.panel===P)vrDrawPanel();},2700);}
@@ -3619,23 +3623,21 @@ function headStep(){
  while(HEAD.tg.length&&now-HEAD.tg[0].t>HEAD.WIN)HEAD.tg.shift();
  if(now<HEAD.cool||HEAD.s.length<3)return;
  const y0=HEAD.s[0].y,P=HEAD.s.map(o=>o.p),Y=HEAD.s.map(o=>Math.atan2(Math.sin(o.y-y0),Math.cos(o.y-y0)));
- const nS=HEAD.s.filter(o=>now-o.t<=HEAD.NODWIN),Pn=nS.map(o=>o.p),Yn=nS.map(o=>Math.atan2(Math.sin(o.y-nS[0].y),Math.cos(o.y-nS[0].y)));
  const rng=a=>Math.max(...a)-Math.min(...a);
- let kind=null;
- if(nS.length>=3&&rng(Yn)<=HEAD.OTHER&&nodDown(Pn))kind='nod';
+ let kind=null,ti=-1;
+ if(rng(Y)<=HEAD.OTHER&&(ti=nodTwice(P,HEAD.A_NOD,HEAD.TOL))>=0)kind='nod';
  else if(rng(P)<=HEAD.OTHER&&swings(Y,HEAD.A_SWING)>=HEAD.SWINGS)kind='shake';
  if(!kind)return;
  let g=null;
- if(kind==='nod'){let m=0;for(let i=1;i<Pn.length;i++)if(Pn[i]<Pn[m])m=i;
-  let top=0;for(let i=0;i<=m;i++)if(Pn[i]>Pn[top])top=i;
-  const t0=nS[top].t;let bd=9;HEAD.tg.forEach(o=>{if(o.g&&Math.abs(o.t-t0)<bd&&o.t<=t0+.15){bd=Math.abs(o.t-t0);g=o.g;}});
+ if(kind==='nod'){
+  const t0=HEAD.s[ti].t;let bd=9;HEAD.tg.forEach(o=>{if(o.g&&Math.abs(o.t-t0)<bd&&o.t<=t0+.15){bd=Math.abs(o.t-t0);g=o.g;}});
   if(!g){const st=HEAD.tg.find(o=>o.g);g=st&&st.g;}}
  else{const cnt={};let bestN=0;HEAD.tg.forEach(o=>{if(!o.g)return;const key=o.g.t+(o.g.k||'');cnt[key]=(cnt[key]||0)+1;if(cnt[key]>bestN){bestN=cnt[key];g=o.g;}});}
  HEAD.cool=now+HEAD.COOL;headReset();
  if(!g)return;
  if(kind==='nod'&&g.t==='row'){
   if(isFav(g.fo))headHint('すでに選んでいます（首を振ると外れます）',true);
-  else{const before=FAV.length;vrFav(g.fo);if(FAV.length>before)headHint('うなずき：☆素敵をつけました',true);}}
+  else{const before=FAV.length;vrFav(g.fo);if(FAV.length>before)headHint('うなずき2回：☆素敵をつけました',true);}}
  else if(kind==='shake'&&g.t==='row'){
   if(isFav(g.fo)){vrFav(g.fo);headHint('首ふり（2往復）：素敵を外しました',true);}}
  else if(kind==='shake'&&g.t==='frag'){const i=FR.list.findIndex(f=>f.k===g.k);if(i>=0)fragRemove(i);}}
