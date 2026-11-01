@@ -3456,7 +3456,7 @@ function vrFav(o){
  else{if(favOf(o.q).length>=FAV_MAX){if(P){P.msg=(o.q==='q1'?'問一':'問二')+'はもう2つ選んでいます（★を見つめると外せます）';P.msgT=performance.now()+3500;}vrDrawPanel();return;}
   FAV.push({q:o.q,name:o.name||'（なまえなし）',txt:o.txt});try{chime(-1,1318.5);}catch(e){}}
  saveFav();try{missionEvent({k:'fav'});renderMission();}catch(e){}
- vrDrawPanel();trayDraw();if(TRAY.open)trayListDraw();}
+ vrDrawPanel();}
 const _vf=new THREE.Vector3(),_vu=new THREE.Vector3(),_vs=new THREE.Vector3(),_vq=new THREE.Quaternion();
 const VR_RAY=new THREE.Raycaster(),_vo=new THREE.Vector3();
 const VR_PRESS=1.0;
@@ -3496,75 +3496,67 @@ function vrGazeStar(){
   const tol=Math.max(.045,Math.atan(s.sz*.5/SR)+.02);
   if(a<tol&&a/tol<bd){bd=a/tol;best=i;}});
  return best;}
-/* ── 素敵のトレイ：少し下（草の上）に小さな「★ 素敵」を置き、見つめると一覧が開いて、その場で外せる ── */
-const TRAY={open:false,away:0,yaw:null,hot:[],lhot:[]};
-(function(){
- function mk(w,h,pw){const cv=document.createElement('canvas');cv.width=w;cv.height=h;const tx=new THREE.CanvasTexture(cv);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(pw,pw*h/w),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthTest:false,side:THREE.DoubleSide}));
-  m.renderOrder=996;m.visible=false;scene.add(m);return {cv:cv,g:cv.getContext('2d'),tx:tx,mesh:m,W:w,H:h};}
- TRAY.chip=mk(512,128,8.5);TRAY.list=mk(1024,1024,32);})();
-function trayDraw(){
- const c=TRAY.chip,g=c.g,n=FAV.length;g.clearRect(0,0,c.W,c.H);
- const pr=(VR.hot==='tray')?VR.ht/VR_PRESS:0;
- g.fillStyle='rgba(12,17,32,.62)';rrect(g,4,4,c.W-8,c.H-8,60);g.fill();
- if(pr>0){g.save();rrect(g,4,4,c.W-8,c.H-8,60);g.clip();g.fillStyle='rgba(232,200,106,.45)';g.fillRect(4,4,(c.W-8)*pr,c.H-8);g.restore();}
- g.strokeStyle='rgba(232,200,106,.6)';g.lineWidth=3;rrect(g,4,4,c.W-8,c.H-8,60);g.stroke();
- g.fillStyle='#f3d98a';g.font='600 50px '+VRF;g.textAlign='center';g.textBaseline='middle';
- g.fillText('★ 素敵 '+n,c.W/2,c.H/2+3);c.tx.needsUpdate=true;
- TRAY.hot=[{id:'tray',x:0,y:0,w:c.W,h:c.H,act:()=>{TRAY.open=true;TRAY.away=0;trayListDraw();}}];}
-function trayListDraw(){
- const L=TRAY.list,g=L.g,W=L.W,pad=44,rowH=200;
- const items=FAV.slice();
- const H=Math.min(1024,pad+90+items.length*rowH+130+pad);
- if(L.H!==H){L.H=H;L.cv.height=H;L.mesh.geometry.dispose();L.mesh.geometry=new THREE.PlaneGeometry(32,32*H/W);L.tx.dispose();
-  L.tx=new THREE.CanvasTexture(L.cv);L.mesh.material.map=L.tx;L.mesh.material.needsUpdate=true;}
- g.clearRect(0,0,W,H);
- g.fillStyle='rgba(246,244,238,.95)';rrect(g,0,0,W,H,32);g.fill();
- g.textAlign='left';g.textBaseline='top';
- g.fillStyle='#8a6a1c';g.font='700 52px '+VRF;g.fillText('★ えらんだ素敵',pad,pad);
- g.fillStyle='#6b665c';g.font='500 30px '+VRF;g.textAlign='right';g.fillText('問一・問二 各2つまで',W-pad,pad+14);g.textAlign='left';
- TRAY.lhot=[];let y=pad+90;
- const cnt={q1:0,q2:0};
- items.forEach((o,k)=>{cnt[o.q]++;
-  g.fillStyle='rgba(232,200,106,.9)';rrect(g,pad,y+6,118,46,10);g.fill();
-  g.fillStyle='#241c08';g.font='700 30px '+VRF;g.fillText((o.q==='q1'?'問一':'問二')+(cnt[o.q]===1?'①':'②'),pad+10,y+14);
-  g.fillStyle='#26231f';g.font='500 42px '+VRF;
-  const al=wrapJ(g,'「'+o.txt+'」',W-pad*2-200),ls=al.slice(0,3);if(al.length>3)ls[2]=ls[2].replace(/.$/,'…');
-  ls.forEach((l,m)=>g.fillText(l,pad,y+62+m*50));
-  const bx=W-pad-170,by=y+40,bw=170,bh=92,id='rm'+k,pr=(VR.hot===id)?VR.ht/VR_PRESS:0;
-  g.fillStyle='#fff';rrect(g,bx,by,bw,bh,46);g.fill();g.strokeStyle='#8f1d3d';g.lineWidth=3;rrect(g,bx,by,bw,bh,46);g.stroke();
-  if(pr>0){g.save();rrect(g,bx,by,bw,bh,46);g.clip();g.fillStyle='rgba(143,29,61,.3)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
-  g.fillStyle='#8f1d3d';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText('外す',bx+bw/2,by+bh/2+2);
-  g.textAlign='left';g.textBaseline='top';
-  TRAY.lhot.push({id:id,x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>{FAV=FAV.filter(f=>favKey(f)!==favKey(o));saveFav();
-   try{missionEvent({k:'fav'});renderMission();}catch(e){}
-   trayDraw();vrDrawPanel();if(!FAV.length){trayClose();}else trayListDraw();}});
-  y+=rowH;
-  if(k<items.length-1){g.strokeStyle='rgba(107,102,92,.2)';g.lineWidth=2;g.beginPath();g.moveTo(pad,y-16);g.lineTo(W-pad,y-16);g.stroke();}});
- const bw=300,bh=96,bx=(W-bw)/2,by=H-pad-bh,pr=(VR.hot==='tclose')?VR.ht/VR_PRESS:0;
- g.fillStyle='#2b4a6f';rrect(g,bx,by,bw,bh,48);g.fill();
- if(pr>0){g.save();rrect(g,bx,by,bw,bh,48);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
- g.fillStyle='#fff';g.font='700 40px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText('閉じる',bx+bw/2,by+bh/2+2);
- g.textAlign='left';g.textBaseline='top';
- TRAY.lhot.push({id:'tclose',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:trayClose});
- L.tx.needsUpdate=true;}
-function trayClose(){TRAY.open=false;TRAY.list.mesh.visible=false;VR.hot=null;VR.ht=0;}
-const _ty=new THREE.Vector3();
-function trayPlace(dt){
- const has=FAV.length>0;
- if(!has){TRAY.chip.mesh.visible=false;if(TRAY.open)trayClose();return;}
- camera.getWorldDirection(_ty);const cy=Math.atan2(_ty.x,_ty.z);
- if(TRAY.yaw===null)TRAY.yaw=cy;
- /* 少し遅れてついてくる（見ようとしたら逃げないように） */
- if(!TRAY.open){let d=cy-TRAY.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));
-  if(Math.abs(d)>.45)TRAY.yaw+=d*Math.min(1,dt*2.2);}
- const el=-.42,R=40,y=TRAY.yaw;
- const c=TRAY.chip.mesh;c.visible=!TRAY.open;
- c.position.set(Math.sin(y)*Math.cos(el)*R,Math.sin(el)*R,Math.cos(y)*Math.cos(el)*R);c.up.set(0,1,0);c.lookAt(0,0,0);
- const L=TRAY.list.mesh;L.visible=TRAY.open;
- if(TRAY.open){/* 開いたとき、見出しがちょうど視線の位置に来るように（ボタンに重ならない） */
-  const PH=L.geometry.parameters.height,R2=44,e2=el-Math.atan((PH/2-2.5)/R2);
-  L.position.set(Math.sin(y)*Math.cos(e2)*R2,Math.sin(e2)*R2,Math.cos(y)*Math.cos(e2)*R2);L.up.set(0,1,0);L.lookAt(0,0,0);}}
+/* ── 素敵のかけら：選んだ文は、足もとの草の上に「星のかけら」として置かれる。
+   かけらを見つめると文が浮かび、そのまま見つめつづけると外れて、空へ帰っていく。 ── */
+const FRAG_TEX=mkTex((g,s)=>{const c=s/2;
+ const r=g.createRadialGradient(c,c,0,c,c,c);r.addColorStop(0,'rgba(255,240,190,.55)');r.addColorStop(.5,'rgba(232,200,106,.16)');r.addColorStop(1,'rgba(232,200,106,0)');
+ g.fillStyle=r;g.fillRect(0,0,s,s);
+ g.beginPath();const pts=[[.5,.22],[.62,.44],[.74,.5],[.6,.6],[.55,.8],[.44,.6],[.28,.56],[.42,.44]];
+ pts.forEach((p,i)=>i?g.lineTo(p[0]*s,p[1]*s):g.moveTo(p[0]*s,p[1]*s));g.closePath();
+ const f=g.createLinearGradient(0,s*.2,0,s*.8);f.addColorStop(0,'#fffbe8');f.addColorStop(1,'#e8c86a');g.fillStyle=f;g.fill();},128);
+const FR={list:[],yaw:null,gaze:-1,t:0,cap:null,fly:[]};
+const FR_HOLD=1.8,FR_EL=-.6,FR_R=30;
+const FR_CAP=(function(){const cv=document.createElement('canvas');cv.width=1024;cv.height=300;const tx=new THREE.CanvasTexture(cv);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
+ sp.scale.set(20,20*300/1024,1);sp.renderOrder=996;sp.visible=false;scene.add(sp);return {cv:cv,g:cv.getContext('2d'),tx:tx,sp:sp,key:''};})();
+function fragSync(){
+ const want=FAV.map(favKey);
+ FR.list=FR.list.filter(f=>{if(want.includes(f.k))return true;scene.remove(f.sp);f.sp.material.dispose();return false;});
+ FAV.forEach(o=>{const k=favKey(o);if(FR.list.some(f=>f.k===k))return;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:FRAG_TEX,transparent:true,depthTest:false,blending:THREE.AdditiveBlending}));
+  sp.scale.setScalar(3.2);sp.renderOrder=995;sp.visible=VR.on;scene.add(sp);FR.list.push({k:k,o:o,sp:sp,ph:Math.random()*6});});}
+function fragCap(f,k){const C=FR_CAP,g=C.g,W=1024,H=300;
+ const key=f.k+'|'+Math.round(k*30);if(key===C.key)return;C.key=key;
+ g.clearRect(0,0,W,H);g.fillStyle='rgba(12,17,32,.82)';rrect(g,0,0,W,H,28);g.fill();
+ g.strokeStyle='rgba(232,200,106,.55)';g.lineWidth=3;rrect(g,2,2,W-4,H-4,28);g.stroke();
+ const cnt={q1:0,q2:0};let tag='';FAV.forEach(o=>{cnt[o.q]++;if(favKey(o)===f.k)tag=(o.q==='q1'?'問一':'問二')+(cnt[o.q]===1?'①':'②');});
+ g.textAlign='left';g.textBaseline='top';g.fillStyle='#f3d98a';g.font='700 36px '+VRF;g.fillText('★ '+tag,36,26);
+ g.fillStyle='#f2ece0';g.font='500 44px '+VRF;
+ const al=wrapJ(g,'「'+f.o.txt+'」',W-72),ls=al.slice(0,2);if(al.length>2)ls[1]=ls[1].replace(/.$/,'…');
+ ls.forEach((l,m)=>g.fillText(l,36,84+m*56));
+ g.fillStyle='rgba(223,230,245,.18)';rrect(g,36,H-52,W-72,16,8);g.fill();
+ if(k>0){g.fillStyle='#e8c86a';rrect(g,36,H-52,(W-72)*k,16,8);g.fill();}
+ g.fillStyle='#9fb0c8';g.font='500 28px '+VRF;g.textAlign='right';g.fillText('見つめつづけると外れる',W-36,24);
+ C.tx.needsUpdate=true;}
+/* 足もとに並べる（ゆっくり遅れてついてくる）。見つめた一つを返す */
+function fragStep(dt){
+ fragSync();
+ camera.getWorldDirection(_vf);const cy=Math.atan2(_vf.x,_vf.z);
+ if(FR.yaw===null)FR.yaw=cy;
+ if(FR.gaze<0){let d=cy-FR.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>.5)FR.yaw+=d*Math.min(1,dt*2);}
+ const n=FR.list.length;let best=-1,bd=.085;
+ FR.list.forEach((f,i)=>{const y=FR.yaw+(i-(n-1)/2)*.2,el=FR_EL+(i%2)*.04;
+  f.sp.position.set(Math.sin(y)*Math.cos(el)*FR_R,Math.sin(el)*FR_R,Math.cos(y)*Math.cos(el)*FR_R);
+  f.sp.visible=true;f.sp.material.opacity=.75+.25*Math.sin(T*2.1+f.ph);
+  _vs.copy(f.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));if(a<bd){bd=a;best=i;}});
+ if(best!==FR.gaze){FR.gaze=best;FR.t=0;}
+ /* 空へ帰っていくかけら */
+ for(let i=FR.fly.length-1;i>=0;i--){const q=FR.fly[i];q.t+=dt;q.sp.position.addScaledVector(q.v,dt);
+  q.sp.material.opacity=Math.max(0,1-q.t/1.6);q.sp.scale.setScalar(3.2*(1+q.t));
+  if(q.t>1.6){scene.remove(q.sp);q.sp.material.dispose();FR.fly.splice(i,1);}}
+ if(best<0){FR_CAP.sp.visible=false;return false;}
+ const f=FR.list[best];FR.t+=dt;const k=Math.min(1,FR.t/FR_HOLD);
+ f.sp.scale.setScalar(3.2*(1+.35*k));
+ fragCap(f,k);FR_CAP.sp.visible=true;camUp();
+ FR_CAP.sp.position.copy(f.sp.position).normalize().multiplyScalar(34).addScaledVector(_cu,4.6);
+ vrRing(0);VR.gaze=-1;VR.gt=0;
+ if(k>=1){/* 外す */
+  FAV=FAV.filter(o=>favKey(o)!==f.k);saveFav();try{missionEvent({k:'fav'});renderMission();}catch(e){}
+  FR.list.splice(best,1);FR.fly.push({sp:f.sp,t:0,v:f.sp.position.clone().normalize().multiplyScalar(-2).add(new THREE.Vector3(0,14,0))});
+  try{chime(-1,880);}catch(e){}
+  FR.gaze=-1;FR.t=0;FR_CAP.sp.visible=false;vrDrawPanel();}
+ return true;}
+function fragHide(){FR.list.forEach(f=>f.sp.visible=false);FR_CAP.sp.visible=false;FR.gaze=-1;FR.t=0;}
 function vrHitMesh(mesh,W,H){
  if(!mesh.visible)return null;
  camera.getWorldPosition(_vo);camera.getWorldDirection(_vf);VR_RAY.set(_vo,_vf);
@@ -3576,7 +3568,7 @@ function vrPress(hp,hot,draw,dt){
  if(id!==VR.hot){const was=VR.hot;VR.hot=id;VR.ht=0;VR.done=false;draw();if(was)vrRedrawAll();}
  if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=VR_PRESS){VR.done=true;VR.ht=0;b.act();}else draw();}
  VR.gaze=-1;VR.gt=0;vrRing(b&&!VR.done?VR.ht/VR_PRESS:0);}
-function vrRedrawAll(){if(VR.panel)vrDrawPanel();if(FAV.length)trayDraw();if(TRAY.open)trayListDraw();}
+function vrRedrawAll(){if(VR.panel)vrDrawPanel();}
 function vrStep(dt){
  bump();FOVT=null;
  camera.getWorldDirection(_vf);
@@ -3586,13 +3578,7 @@ function vrStep(dt){
  if(down){VR.exitT+=dt;if(VR.exitT>=VR_EXIT){vrExitMode();return;}}else VR.exitT=Math.max(0,VR.exitT-dt*2);
  drawExit(VR.exitT/VR_EXIT);
  /* 札の上のボタンを見つめる */
- trayPlace(dt);
- if(!down){
-  const lh=TRAY.open?vrHitMesh(TRAY.list.mesh,TRAY.list.W,TRAY.list.H):null;
-  if(lh){TRAY.away=0;vrPress(lh,TRAY.lhot,trayListDraw,dt);return;}
-  if(TRAY.open){TRAY.away+=dt;if(TRAY.away>1.6)trayClose();}
-  const ch=vrHitMesh(TRAY.chip.mesh,TRAY.chip.W,TRAY.chip.H);
-  if(ch){vrPress(ch,TRAY.hot,trayDraw,dt);return;}}
+ if(down)fragHide();else if(fragStep(dt))return;
  const hp=down?null:vrPanelHit();
  if(hp){VR.away=0;vrPress(hp,VR.panel.hot,vrDrawPanel,dt);return;}
  if(VR.hot){VR.hot=null;VR.ht=0;VR.done=false;vrRedrawAll();}
@@ -3629,11 +3615,11 @@ function vrEnter(){
  try{const p=rq&&rq.call(el,{navigationUI:'hide'});
   if(p&&p.then)p.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}).catch(()=>{});}catch(e){}
  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{VR.lock=l;}).catch(()=>{});}catch(e){}
- setFov(84);vrCheckRot();TRAY.yaw=null;trayDraw();
+ setFov(84);vrCheckRot();FR.yaw=null;fragSync();
  setTimeout(()=>{if(VR.on&&!gyroActive){$('vrmsg').textContent='この端末では傾きセンサーが使えないため、VRで見回すことができません。画面をタップしてもどってください。';$('vrmsg').classList.add('on');}},2600);}
 function vrExitMode(){
  if(!VR.on)return;VR.on=false;
- vrClosePanel();trayClose();TRAY.chip.mesh.visible=false;vrRing(0);vrRet.visible=false;vrExit.visible=false;
+ vrClosePanel();fragHide();vrRing(0);vrRet.visible=false;vrExit.visible=false;
  document.body.classList.remove('vr');$('vrrot').classList.remove('on');$('vrmsg').classList.remove('on');
  try{const ex=document.exitFullscreen||document.webkitExitFullscreen;if(document.fullscreenElement||document.webkitFullscreenElement)ex.call(document);}catch(e){}
  try{if(VR.lock){VR.lock.release();VR.lock=null;}}catch(e){}
