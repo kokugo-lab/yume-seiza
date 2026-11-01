@@ -401,6 +401,20 @@ ol.fr li{margin-bottom:6px}
 #qban span{display:block;margin-top:10px;font-size:clamp(13px,3.2vw,16px);line-height:1.8;letter-spacing:.08em}
 #lookup{top:calc(140px + env(safe-area-inset-top))}
 </style>
+<style>
+/* ───── VRゴーグル（二画面） ───── */
+#vrbtn{left:12px;top:calc(92px + env(safe-area-inset-top));background:rgba(232,200,106,.95);color:#241c08;font-weight:600}
+#vrcover,#vrrot,#vrmsg{display:none}
+body.vr #hud,body.vr #sinfo,body.vr #sheet,body.vr #note,body.vr #mission,body.vr #tell,body.vr #namebox{display:none!important}
+body.vr #vrcover{display:block;position:fixed;inset:0;z-index:40;background:transparent}
+body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:#000}
+#vrrot.on{display:flex;position:fixed;inset:0;z-index:41;background:rgba(5,7,15,.94);color:#f2ece0;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;text-align:center;padding:24px;font-size:15px;letter-spacing:.14em;line-height:2;pointer-events:none}
+#vrrot .ic{font-size:44px;animation:vrR 1.8s ease-in-out infinite}
+@keyframes vrR{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+#vrmsg.on{display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:42;width:min(440px,86vw);
+  background:rgba(246,244,238,.97);color:#26231f;border-radius:10px;padding:16px;font-size:13px;line-height:1.9;pointer-events:none}
+</style>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -412,6 +426,7 @@ ol.fr li{margin-bottom:6px}
   <button class="btn" id="mebtn">名前を入れる</button>
   <button class="btn" id="spk">🔇</button>
   <button class="btn" id="rot" aria-label="向きを90度回す">↻ 90°</button>
+  <button class="btn" id="vrbtn">🥽 VRで見る</button>
   <div id="counter"></div>
   <div id="modes">
     <button data-f="all" class="on">すべて</button>
@@ -522,6 +537,9 @@ ol.fr li{margin-bottom:6px}
   <p class="cnt">残した星座は夜空に名前が浮かび、画面左下の一覧にも並びます。<br>プリントの問①に、つけた名前を書き写しましょう。</p>
 </div></div>
 
+<div id="vrcover" aria-label="タップでVRをおわる"></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星はまん中の点で見つめると開きます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
 <div id="intro"><div class="bar t"></div><div class="bar b"></div><div id="icap"></div><button id="iskip">スキップ ▶</button></div>
@@ -1843,6 +1861,7 @@ function loop(){
   f.sp.scale.setScalar(2+70*k);f.sp.material.opacity=1-k;
   if(k>=1){skyG.remove(f.sp);flashes.splice(i,1);}}
  stepFeatures(dt);
+ if(VR.on){vrStep(dt);if(VR.on){vrRender();return;}}
  renderer.render(scene,camera);}
 
 /* ══ 追加機能 ══ */
@@ -3332,6 +3351,155 @@ applyPlace(PLACE,true);
 toolOn('lines',LINES_ON);
 renderQ(QMODE);renderQTog();
 introStart();
+
+/* ══ VRゴーグル（スマホを入れる二画面方式） ══
+   画面を左右に分けて同じ夜空を少しずらして描き、ゴーグルのレンズで一つに見せる。
+   ゴーグルの中では画面に触れないので、星は「まん中の点で見つめる」と選べる。
+   足もとを見つめるとVRをおわる。画面をタップしてもおわる。 */
+const VR={on:false,stereo:new THREE.StereoCamera(),gaze:-1,gt:0,cur:-1,panel:null,away:0,exitT:0,fov0:72,pitch0:0};
+VR.stereo.eyeSep=0.35;
+const VR_DWELL=1.4,VR_EXIT=2.2;
+/* まん中の照準（見つめると輪が満ちていく） */
+const vrRet=new THREE.Group();
+(function(){
+ const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:DOT_TEX,transparent:true,depthTest:false,opacity:.95}));
+ dot.scale.setScalar(.5);vrRet.add(dot);
+ const cv=document.createElement('canvas');cv.width=cv.height=128;
+ const tx=new THREE.CanvasTexture(cv);
+ const rg=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
+ rg.scale.setScalar(2.2);vrRet.add(rg);
+ vrRet.userData={cv:cv,tx:tx,last:-1};
+ vrRet.position.set(0,0,-30);vrRet.renderOrder=999;dot.renderOrder=999;rg.renderOrder=999;
+ vrRet.visible=false;camera.add(vrRet);})();
+function vrRing(k){const u=vrRet.userData,q=Math.round(k*40)/40;if(q===u.last)return;u.last=q;
+ const g=u.cv.getContext('2d');g.clearRect(0,0,128,128);if(q<=0){u.tx.needsUpdate=true;return;}
+ g.strokeStyle='rgba(255,226,150,.95)';g.lineWidth=9;g.lineCap='round';
+ g.beginPath();g.arc(64,64,48,-Math.PI/2,-Math.PI/2+q*Math.PI*2);g.stroke();u.tx.needsUpdate=true;}
+
+/* 足もとの「おわる」しるし */
+const vrExit=(function(){
+ const cv=document.createElement('canvas');cv.width=512;cv.height=256;const g=cv.getContext('2d');
+ const tx=new THREE.CanvasTexture(cv);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
+ sp.scale.set(24,12,1);sp.renderOrder=998;sp.visible=false;scene.add(sp);
+ sp.userData={cv:cv,g:g,tx:tx,last:-1};return sp;})();
+function drawExit(k){const u=vrExit.userData,q=Math.round(k*30)/30;if(q===u.last)return;u.last=q;
+ const g=u.g;g.clearRect(0,0,512,256);
+ g.fillStyle='rgba(12,17,32,.82)';g.beginPath();g.arc(256,96,80,0,7);g.fill();
+ g.strokeStyle='rgba(223,230,245,.45)';g.lineWidth=4;g.beginPath();g.arc(256,96,80,0,7);g.stroke();
+ if(q>0){g.strokeStyle='#e8c86a';g.lineWidth=12;g.lineCap='round';
+  g.beginPath();g.arc(256,96,80,-Math.PI/2,-Math.PI/2+q*Math.PI*2);g.stroke();}
+ g.fillStyle='#f2ece0';g.font='500 54px "Hiragino Mincho ProN",serif';g.textAlign='center';g.textBaseline='middle';
+ g.fillText('×',256,98);g.font='500 34px "Hiragino Mincho ProN",serif';
+ g.fillText('見つめるとVRをおわる',256,216);u.tx.needsUpdate=true;}
+
+/* 星の説明を、夜空の中に札として出す（横書き） */
+function wrapJ(g,t,maxW){const out=[];let line='';
+ for(const ch of [...t]){if(g.measureText(line+ch).width>maxW&&line){out.push(line);line=ch;}else line+=ch;}
+ if(line)out.push(line);return out;}
+function vrPanelTex(i){
+ const w=WORDS[i],W=1024,pad=56;
+ const cv=document.createElement('canvas');cv.width=W;cv.height=1024;const g=cv.getContext('2d');
+ const F='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
+ const lines=[];
+ g.font='500 34px '+F;
+ const meta=w.n+'人が使った言葉　問一 '+w.q1+'人・問二 '+w.q2+'人'+(w.mine?'　（自分も使った）':'');
+ const items=(w.who||[]).slice(0,3).map(o=>({t:o.txt,s:(o.fld==='q1'?'問一':'問二')}));
+ g.font='500 52px '+F;
+ const body=[];items.forEach(o=>{const al=wrapJ(g,'「'+o.t+'」',W-pad*2),ls=al.slice(0,2);
+  if(al.length>2)ls[1]=ls[1].replace(/.$/,'…');body.push({ls:ls,s:o.s});});
+ let h=pad+116+66+26;body.forEach(b=>{h+=b.ls.length*70+46;});h+=pad-10;
+ h=Math.min(1024,h);cv.height=h;
+ g.fillStyle='rgba(246,244,238,.95)';
+ const r=36;g.beginPath();g.moveTo(r,0);g.arcTo(W,0,W,h,r);g.arcTo(W,h,0,h,r);g.arcTo(0,h,0,0,r);g.arcTo(0,0,W,0,r);g.fill();
+ g.textBaseline='top';g.fillStyle='#8f1d3d';g.font='700 100px '+F;g.fillText(w.w,pad,pad);
+ g.fillStyle='#6b665c';g.font='600 40px '+F;g.fillText(meta,pad,pad+116);
+ let y=pad+116+66;
+ g.strokeStyle='rgba(107,102,92,.35)';g.lineWidth=2;g.beginPath();g.moveTo(pad,y);g.lineTo(W-pad,y);g.stroke();y+=26;
+ body.forEach(b=>{g.fillStyle='#2b4a6f';g.font='600 34px '+F;g.fillText(b.s,pad,y);y+=42;
+  g.fillStyle='#26231f';g.font='500 52px '+F;b.ls.forEach(l=>{if(y<h-60){g.fillText(l,pad,y);}y+=70;});y+=4;});
+ if(!body.length){g.fillStyle='#6b665c';g.font='400 34px '+F;g.fillText('（まだ文がありません）',pad,y);}
+ const tx=new THREE.CanvasTexture(cv);tx.needsUpdate=true;return {tx:tx,aspect:h/W};}
+const _vf=new THREE.Vector3(),_vu=new THREE.Vector3(),_vs=new THREE.Vector3(),_vq=new THREE.Quaternion();
+function vrClosePanel(){if(VR.panel){scene.remove(VR.panel);VR.panel.material.map.dispose();VR.panel.material.dispose();VR.panel=null;}
+ VR.cur=-1;select(-1);}
+function vrOpen(i){
+ vrClosePanel();VR.cur=i;VR.away=0;
+ select(i);
+ const p=vrPanelTex(i);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:p.tx,transparent:true,depthTest:false}));
+ const W=40;sp.scale.set(W,W*p.aspect,1);sp.renderOrder=997;
+ /* 星のすこし下（視線の下側）に、近めに浮かべる */
+ _vs.copy(POS[i]).normalize();camUp();
+ const pos=_vs.clone().multiplyScalar(50).addScaledVector(_cu,-(W*p.aspect/2+3));
+ sp.position.copy(pos);scene.add(sp);VR.panel=sp;
+ try{if(typeof bell==='function'&&soundOn)bell(i);}catch(e){}
+ try{missionEvent({k:'star',i:i,fromSearch:false});}catch(e){}}
+/* 視線のまん中にいちばん近い星 */
+function vrGazeStar(){
+ camera.getWorldDirection(_vf);let best=-1,bd=1e9;
+ stars.forEach((s,i)=>{if(!s.sp.visible||!POS[i])return;
+  _vs.copy(s.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
+  const tol=Math.max(.045,Math.atan(s.sz*.5/SR)+.02);
+  if(a<tol&&a/tol<bd){bd=a/tol;best=i;}});
+ return best;}
+function vrStep(dt){
+ bump();FOVT=null;
+ camera.getWorldDirection(_vf);
+ /* 足もと */
+ const down=_vf.y<-.82;
+ vrExit.visible=true;vrExit.position.set(0,-40,0).add(_vs.set(_vf.x,0,_vf.z).normalize().multiplyScalar(.01));
+ if(down){VR.exitT+=dt;if(VR.exitT>=VR_EXIT){vrExitMode();return;}}else VR.exitT=Math.max(0,VR.exitT-dt*2);
+ drawExit(VR.exitT/VR_EXIT);
+ /* 星を見つめる */
+ const g=down?-1:vrGazeStar();
+ if(g!==VR.gaze){VR.gaze=g;VR.gt=0;}
+ if(g>=0&&g!==VR.cur){VR.gt+=dt;if(VR.gt>=VR_DWELL){vrOpen(g);VR.gt=0;}}
+ vrRing(g>=0&&g!==VR.cur?VR.gt/VR_DWELL:0);
+ /* 札から目をはなしてしばらくたつと閉じる */
+ if(VR.cur>=0&&POS[VR.cur]){
+  _vs.copy(POS[VR.cur]).normalize();const a1=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
+  let a2=9;if(VR.panel){_vu.copy(VR.panel.position).normalize();a2=Math.acos(Math.max(-1,Math.min(1,_vu.dot(_vf))));}
+  if(Math.min(a1,a2)>.62){VR.away+=dt;if(VR.away>1.6)vrClosePanel();}else VR.away=0;}}
+function vrRender(){
+ const w=canvas.clientWidth||innerWidth,h=canvas.clientHeight||innerHeight;
+ rig.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+ const asp=camera.aspect;camera.aspect=(w/2)/h;camera.updateProjectionMatrix();
+ VR.stereo.update(camera);
+ renderer.setScissorTest(true);
+ renderer.setScissor(0,0,w/2,h);renderer.setViewport(0,0,w/2,h);renderer.render(scene,VR.stereo.cameraL);
+ renderer.setScissor(w/2,0,w/2,h);renderer.setViewport(w/2,0,w/2,h);renderer.render(scene,VR.stereo.cameraR);
+ renderer.setScissorTest(false);renderer.setViewport(0,0,w,h);
+ camera.aspect=asp;camera.updateProjectionMatrix();}
+function vrPortrait(){return (innerHeight>innerWidth);}
+function vrCheckRot(){$('vrrot').classList.toggle('on',VR.on&&vrPortrait());}
+function vrEnter(){
+ if(VR.on)return;
+ if(HLOCK()||DAWN_ON){lockNote();return;}
+ stopTour();closeSheet();closeInfo();cancelDraw();setTool('');showQ(false);
+ VR.on=true;VR.fov0=camera.fov;VR.gaze=-1;VR.gt=0;VR.exitT=0;
+ document.body.classList.add('vr');vrRet.visible=true;
+ startGyro();
+ const el=document.documentElement,rq=el.requestFullscreen||el.webkitRequestFullscreen;
+ try{const p=rq&&rq.call(el,{navigationUI:'hide'});
+  if(p&&p.then)p.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}).catch(()=>{});}catch(e){}
+ try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{VR.lock=l;}).catch(()=>{});}catch(e){}
+ setFov(84);vrCheckRot();
+ setTimeout(()=>{if(VR.on&&!gyroActive){$('vrmsg').textContent='この端末では傾きセンサーが使えないため、VRで見回すことができません。画面をタップしてもどってください。';$('vrmsg').classList.add('on');}},2600);}
+function vrExitMode(){
+ if(!VR.on)return;VR.on=false;
+ vrClosePanel();vrRing(0);vrRet.visible=false;vrExit.visible=false;
+ document.body.classList.remove('vr');$('vrrot').classList.remove('on');$('vrmsg').classList.remove('on');
+ try{const ex=document.exitFullscreen||document.webkitExitFullscreen;if(document.fullscreenElement||document.webkitFullscreenElement)ex.call(document);}catch(e){}
+ try{if(VR.lock){VR.lock.release();VR.lock=null;}}catch(e){}
+ setFov(VR.fov0||72);resize();
+ showNote('VRをおわりました。');}
+$('vrbtn').addEventListener('click',e=>{e.stopPropagation();vrEnter();});
+$('vrcover').addEventListener('click',e=>{e.stopPropagation();vrExitMode();});
+$('vrcover').addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();vrExitMode();},{passive:false});
+addEventListener('resize',vrCheckRot);
+document.addEventListener('fullscreenchange',()=>setTimeout(resize,200));
+
 loop();
 </script>
 </body>
