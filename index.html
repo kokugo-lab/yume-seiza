@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星はまん中の点で見つめると開きます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -3393,48 +3393,101 @@ function drawExit(k){const u=vrExit.userData,q=Math.round(k*30)/30;if(q===u.last
  g.fillText('×',256,98);g.font='500 34px "Hiragino Mincho ProN",serif';
  g.fillText('見つめるとVRをおわる',256,216);u.tx.needsUpdate=true;}
 
-/* 星の説明を、夜空の中に札として出す（横書き） */
+/* 星の説明を、夜空の中に札として出す（横書き）。
+   札の中のボタン（▲前へ・▼次へ・☆素敵）は、まん中の点で見つめると押せる。 */
 function wrapJ(g,t,maxW){const out=[];let line='';
  for(const ch of [...t]){if(g.measureText(line+ch).width>maxW&&line){out.push(line);line=ch;}else line+=ch;}
  if(line)out.push(line);return out;}
-function vrPanelTex(i){
- const w=WORDS[i],W=1024,pad=56;
- const cv=document.createElement('canvas');cv.width=W;cv.height=1024;const g=cv.getContext('2d');
- const F='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
- const lines=[];
- g.font='500 34px '+F;
- const meta=w.n+'人が使った言葉　問一 '+w.q1+'人・問二 '+w.q2+'人'+(w.mine?'　（自分も使った）':'');
- const items=(w.who||[]).slice(0,3).map(o=>({t:o.txt,s:(o.fld==='q1'?'問一':'問二')}));
- g.font='500 52px '+F;
- const body=[];items.forEach(o=>{const al=wrapJ(g,'「'+o.t+'」',W-pad*2),ls=al.slice(0,2);
-  if(al.length>2)ls[1]=ls[1].replace(/.$/,'…');body.push({ls:ls,s:o.s});});
- let h=pad+116+66+26;body.forEach(b=>{h+=b.ls.length*70+46;});h+=pad-10;
- h=Math.min(1024,h);cv.height=h;
- g.fillStyle='rgba(246,244,238,.95)';
- const r=36;g.beginPath();g.moveTo(r,0);g.arcTo(W,0,W,h,r);g.arcTo(W,h,0,h,r);g.arcTo(0,h,0,0,r);g.arcTo(0,0,W,0,r);g.fill();
- g.textBaseline='top';g.fillStyle='#8f1d3d';g.font='700 100px '+F;g.fillText(w.w,pad,pad);
- g.fillStyle='#6b665c';g.font='600 40px '+F;g.fillText(meta,pad,pad+116);
- let y=pad+116+66;
- g.strokeStyle='rgba(107,102,92,.35)';g.lineWidth=2;g.beginPath();g.moveTo(pad,y);g.lineTo(W-pad,y);g.stroke();y+=26;
- body.forEach(b=>{g.fillStyle='#2b4a6f';g.font='600 34px '+F;g.fillText(b.s,pad,y);y+=42;
-  g.fillStyle='#26231f';g.font='500 52px '+F;b.ls.forEach(l=>{if(y<h-60){g.fillText(l,pad,y);}y+=70;});y+=4;});
- if(!body.length){g.fillStyle='#6b665c';g.font='400 34px '+F;g.fillText('（まだ文がありません）',pad,y);}
- const tx=new THREE.CanvasTexture(cv);tx.needsUpdate=true;return {tx:tx,aspect:h/W};}
+const VRP={W:1024,H:1180,PER:3,pad:48};
+const VRF='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
+function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function vrDrawPanel(){
+ const P=VR.panel;if(!P)return;
+ const w=WORDS[P.i],g=P.g,W=VRP.W,H=VRP.H,pad=VRP.pad;
+ g.clearRect(0,0,W,H);
+ g.fillStyle='rgba(246,244,238,.96)';rrect(g,0,0,W,H,36);g.fill();
+ g.textBaseline='top';g.textAlign='left';
+ g.fillStyle='#8f1d3d';g.font='700 92px '+VRF;g.fillText(w.w,pad,pad-6);
+ g.fillStyle='#6b665c';g.font='600 36px '+VRF;
+ g.fillText(w.n+'人が使った言葉　問一 '+w.q1+'人・問二 '+w.q2+'人'+(w.mine?'　（自分も使った）':''),pad,pad+100);
+ let y=pad+156;
+ g.strokeStyle='rgba(107,102,92,.35)';g.lineWidth=2;g.beginPath();g.moveTo(pad,y);g.lineTo(W-pad,y);g.stroke();y+=18;
+ P.hot=[];
+ const who=w.who||[],pages=Math.max(1,Math.ceil(who.length/VRP.PER));
+ P.page=Math.max(0,Math.min(pages-1,P.page));
+ const rowH=228;
+ who.slice(P.page*VRP.PER,P.page*VRP.PER+VRP.PER).forEach((o,k)=>{
+  const top=y+k*rowH,fo={q:o.fld,name:o.name,txt:o.txt},on=isFav(fo);
+  g.fillStyle='#2b4a6f';g.font='600 32px '+VRF;g.fillText(o.fld==='q1'?'問一':'問二',pad,top+8);
+  g.fillStyle='#26231f';g.font='500 46px '+VRF;
+  const al=wrapJ(g,'「'+o.txt+'」',W-pad*2-210),ls=al.slice(0,3);
+  if(al.length>3)ls[2]=ls[2].replace(/.$/,'…');
+  ls.forEach((l,m)=>g.fillText(l,pad,top+50+m*58));
+  /* ☆素敵ボタン */
+  const bx=W-pad-190,by=top+44,bw=190,bh=96,id='fav'+k;
+  const pr=(VR.hot===id)?VR.ht/VR_PRESS:0;
+  g.fillStyle=on?'#e8c86a':'#fffaf0';rrect(g,bx,by,bw,bh,48);g.fill();
+  g.strokeStyle='#c9a34a';g.lineWidth=3;rrect(g,bx,by,bw,bh,48);g.stroke();
+  if(pr>0){g.save();rrect(g,bx,by,bw,bh,48);g.clip();g.fillStyle='rgba(232,200,106,.55)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
+  g.fillStyle=on?'#241c08':'#8a6a1c';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';
+  g.fillText(on?'★えらんだ':'☆素敵',bx+bw/2,by+bh/2+2);g.textAlign='left';g.textBaseline='top';
+  P.hot.push({id:id,x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>vrFav(fo)});
+  if(k<VRP.PER-1&&k<who.length-P.page*VRP.PER-1){g.strokeStyle='rgba(107,102,92,.18)';g.beginPath();g.moveTo(pad,top+rowH-12);g.lineTo(W-pad,top+rowH-12);g.stroke();}});
+ if(!who.length){g.fillStyle='#6b665c';g.font='400 40px '+VRF;g.fillText('（まだ文がありません）',pad,y+20);}
+ /* 下の列：▲前へ　ページ　▼次へ */
+ const fy=H-pad-110,bw=280,bh=104;
+ [['prev','▲ 前へ',pad,P.page>0,-1],['next','▼ 次へ',W-pad-bw,P.page<pages-1,1]].forEach(([id,t,x,ok,d])=>{
+  const pr=(VR.hot===id)?VR.ht/VR_PRESS:0;
+  g.fillStyle=ok?'#2b4a6f':'rgba(107,102,92,.18)';rrect(g,x,fy,bw,bh,52);g.fill();
+  if(ok&&pr>0){g.save();rrect(g,x,fy,bw,bh,52);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(x,fy,bw*pr,bh);g.restore();}
+  g.fillStyle=ok?'#fff':'rgba(107,102,92,.5)';g.font='700 42px '+VRF;g.textAlign='center';g.textBaseline='middle';
+  g.fillText(t,x+bw/2,fy+bh/2+2);
+  if(ok)P.hot.push({id:id,x:x-14,y:fy-14,w:bw+28,h:bh+28,act:()=>{P.page+=d;vrDrawPanel();}});});
+ g.fillStyle='#6b665c';g.font='600 38px '+VRF;g.textAlign='center';g.textBaseline='middle';
+ g.fillText((P.page+1)+' / '+pages,W/2,fy+bh/2);
+ /* 一言のお知らせ（2つ選んだあと など） */
+ if(P.msg&&performance.now()<P.msgT){g.fillStyle='rgba(143,29,61,.94)';rrect(g,pad,fy-96,W-pad*2,80,20);g.fill();
+  g.fillStyle='#fff';g.font='600 34px '+VRF;g.fillText(P.msg,W/2,fy-56);}
+ g.textAlign='left';g.textBaseline='top';
+ P.tx.needsUpdate=true;}
+function vrFav(o){
+ const P=VR.panel;
+ if(isFav(o)){FAV=FAV.filter(f=>favKey(f)!==favKey(o));}
+ else{if(favOf(o.q).length>=FAV_MAX){if(P){P.msg=(o.q==='q1'?'問一':'問二')+'はもう2つ選んでいます（★を見つめると外せます）';P.msgT=performance.now()+3500;}vrDrawPanel();return;}
+  FAV.push({q:o.q,name:o.name||'（なまえなし）',txt:o.txt});try{chime(-1,1318.5);}catch(e){}}
+ saveFav();try{missionEvent({k:'fav'});renderMission();}catch(e){}
+ vrDrawPanel();}
 const _vf=new THREE.Vector3(),_vu=new THREE.Vector3(),_vs=new THREE.Vector3(),_vq=new THREE.Quaternion();
-function vrClosePanel(){if(VR.panel){scene.remove(VR.panel);VR.panel.material.map.dispose();VR.panel.material.dispose();VR.panel=null;}
- VR.cur=-1;select(-1);}
+const VR_RAY=new THREE.Raycaster(),_vo=new THREE.Vector3();
+const VR_PRESS=1.0;
+function vrClosePanel(){const P=VR.panel;
+ if(P){scene.remove(P.mesh);P.tx.dispose();P.mesh.material.dispose();P.mesh.geometry.dispose();VR.panel=null;}
+ VR.cur=-1;VR.hot=null;VR.ht=0;select(-1);}
 function vrOpen(i){
  vrClosePanel();VR.cur=i;VR.away=0;
  select(i);
- const p=vrPanelTex(i);
- const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:p.tx,transparent:true,depthTest:false}));
- const W=40;sp.scale.set(W,W*p.aspect,1);sp.renderOrder=997;
- /* 星のすこし下（視線の下側）に、近めに浮かべる */
+ const cv=document.createElement('canvas');cv.width=VRP.W;cv.height=VRP.H;
+ const tx=new THREE.CanvasTexture(cv);
+ const PW=36,PH=PW*VRP.H/VRP.W;
+ const mesh=new THREE.Mesh(new THREE.PlaneGeometry(PW,PH),
+  new THREE.MeshBasicMaterial({map:tx,transparent:true,depthTest:false,side:THREE.DoubleSide}));
+ mesh.renderOrder=997;
+ /* 星のすこし下に、近めに浮かべて、こちらへ向ける */
  _vs.copy(POS[i]).normalize();camUp();
- const pos=_vs.clone().multiplyScalar(50).addScaledVector(_cu,-(W*p.aspect/2+3));
- sp.position.copy(pos);scene.add(sp);VR.panel=sp;
+ mesh.position.copy(_vs).multiplyScalar(46).addScaledVector(_cu,-(PH/2+2));
+ mesh.up.copy(_cu);mesh.lookAt(0,0,0);
+ scene.add(mesh);
+ VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],msg:'',msgT:0};
+ vrDrawPanel();
  try{if(typeof bell==='function'&&soundOn)bell(i);}catch(e){}
  try{missionEvent({k:'star',i:i,fromSearch:false});}catch(e){}}
+/* 視線が札のどこに当たっているか（canvas の座標で） */
+function vrPanelHit(){
+ const P=VR.panel;if(!P)return null;
+ camera.getWorldPosition(_vo);camera.getWorldDirection(_vf);
+ VR_RAY.set(_vo,_vf);const h=VR_RAY.intersectObject(P.mesh);
+ if(!h.length||!h[0].uv)return null;
+ return {x:h[0].uv.x*VRP.W,y:(1-h[0].uv.y)*VRP.H};}
 /* 視線のまん中にいちばん近い星 */
 function vrGazeStar(){
  camera.getWorldDirection(_vf);let best=-1,bd=1e9;
@@ -3448,19 +3501,28 @@ function vrStep(dt){
  camera.getWorldDirection(_vf);
  /* 足もと */
  const down=_vf.y<-.82;
- vrExit.visible=true;vrExit.position.set(0,-40,0).add(_vs.set(_vf.x,0,_vf.z).normalize().multiplyScalar(.01));
+ vrExit.visible=true;vrExit.position.set(0,-40,0);
  if(down){VR.exitT+=dt;if(VR.exitT>=VR_EXIT){vrExitMode();return;}}else VR.exitT=Math.max(0,VR.exitT-dt*2);
  drawExit(VR.exitT/VR_EXIT);
+ /* 札の上のボタンを見つめる */
+ const hp=down?null:vrPanelHit();
+ if(hp){VR.away=0;
+  const P=VR.panel,b=P.hot.find(o=>hp.x>=o.x&&hp.x<=o.x+o.w&&hp.y>=o.y&&hp.y<=o.y+o.h);
+  const id=b?b.id:null;
+  if(id!==VR.hot){VR.hot=id;VR.ht=0;VR.done=false;vrDrawPanel();}
+  if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=VR_PRESS){VR.done=true;VR.ht=0;b.act();}else vrDrawPanel();}
+  VR.gaze=-1;VR.gt=0;vrRing(b&&!VR.done?VR.ht/VR_PRESS:0);return;}
+ if(VR.hot){VR.hot=null;VR.ht=0;VR.done=false;vrDrawPanel();}
  /* 星を見つめる */
  const g=down?-1:vrGazeStar();
  if(g!==VR.gaze){VR.gaze=g;VR.gt=0;}
  if(g>=0&&g!==VR.cur){VR.gt+=dt;if(VR.gt>=VR_DWELL){vrOpen(g);VR.gt=0;}}
  vrRing(g>=0&&g!==VR.cur?VR.gt/VR_DWELL:0);
- /* 札から目をはなしてしばらくたつと閉じる */
+ /* 札と星から目をはなしてしばらくたつと閉じる */
  if(VR.cur>=0&&POS[VR.cur]){
   _vs.copy(POS[VR.cur]).normalize();const a1=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
-  let a2=9;if(VR.panel){_vu.copy(VR.panel.position).normalize();a2=Math.acos(Math.max(-1,Math.min(1,_vu.dot(_vf))));}
-  if(Math.min(a1,a2)>.62){VR.away+=dt;if(VR.away>1.6)vrClosePanel();}else VR.away=0;}}
+  let a2=9;if(VR.panel){_vu.copy(VR.panel.mesh.position).normalize();a2=Math.acos(Math.max(-1,Math.min(1,_vu.dot(_vf))));}
+  if(Math.min(a1,a2)>.75){VR.away+=dt;if(VR.away>2.2)vrClosePanel();}else VR.away=0;}}
 function vrRender(){
  const w=canvas.clientWidth||innerWidth,h=canvas.clientHeight||innerHeight;
  rig.updateMatrixWorld(true);camera.updateMatrixWorld(true);
