@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文でうなずくと☆素敵、首を振ると外れます（ためし）。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文でうなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -3485,7 +3485,7 @@ function vrOpen(i){
  mesh.up.copy(_cu);mesh.lookAt(0,0,0);
  scene.add(mesh);
  const first=!VR.hinted;VR.hinted=true;
- VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],msg:first?'うなずく＝☆素敵　首を振る＝外す':'',ok:true,msgT:first?performance.now()+5000:0};
+ VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],msg:first?'うなずく＝☆素敵　首を2往復振る＝外す':'',ok:true,msgT:first?performance.now()+5000:0};
  vrDrawPanel();
  if(first){const P0=VR.panel;setTimeout(()=>{if(VR.panel===P0)vrDrawPanel();},5100);}
  try{if(typeof bell==='function'&&soundOn)bell(i);}catch(e){}
@@ -3583,17 +3583,20 @@ function vrRedrawAll(){if(VR.panel)vrDrawPanel();}
 /* ── 頭のジェスチャー（ためし）：うなずく＝☆素敵をつける／首を横に振る＝素敵を外す ──
    向きの変化だけを見る。いま見つめている文（札の行）か、足もとのかけらが対象。
    動きの始まりに見ていたものを対象にする（うなずくと視線が下へずれるため）。 */
-const HEAD={A_NOD:.13,R_NOD:.09,A_SHAKE:.15,R_SHAKE:.15,OTHER:.14,WIN:1.1,COOL:1.1,s:[],tg:[],cool:0,row:-1};
+const HEAD={A_NOD:.13,R_NOD:.09,A_SWING:.11,SWINGS:4,OTHER:.14,WIN:1.8,NODWIN:1.1,COOL:1.1,s:[],tg:[],cool:0,row:-1};
 function headTarget(){
  if(FR.gaze>=0&&FR.list[FR.gaze])return {t:'frag',k:FR.list[FR.gaze].k};
  const P=VR.panel,hp=P&&vrPanelHit();
  if(hp&&hp.y>=212){const k=Math.floor((hp.y-222)/228),who=WORDS[P.i].who||[],o=who[P.page*VRP.PER+k];
   if(k>=0&&k<VRP.PER&&o)return {t:'row',k:k,fo:{q:o.fld,name:o.name,txt:o.txt}};}
  return null;}
-function swingBack(v,A,R){/* 一方向に A 動いて、R 戻った（最小・最大の両方を調べる） */
- for(const sg of [1,-1]){let m=0;for(let i=1;i<v.length;i++)if(sg*v[i]<sg*v[m])m=i;
-  if(m>0&&m<v.length-1&&sg*(v[0]-v[m])>=A&&sg*(v[v.length-1]-v[m])>=R)return true;}
- return false;}
+function swings(Y,A){/* 左右の振れの数（A以上の振れだけ数える）。2往復＝4回 */
+ let e=Y[0],d=0,n=0;
+ for(const v of Y){
+  if(d===0){if(v-e>=A){d=1;e=v;n++;}else if(e-v>=A){d=-1;e=v;n++;}}
+  else if(d===1){if(v>e)e=v;else if(e-v>=A){d=-1;e=v;n++;}}
+  else{if(v<e)e=v;else if(v-e>=A){d=1;e=v;n++;}}}
+ return n;}
 function nodDown(P){/* 下を向いて（ピッチが下がり）、戻った */
  let m=0;for(let i=1;i<P.length;i++)if(P[i]<P[m])m=i;
  return m>0&&m<P.length-1&&(P[0]-P[m])>=HEAD.A_NOD&&(P[P.length-1]-P[m])>=HEAD.R_NOD;}
@@ -3612,10 +3615,11 @@ function headStep(){
  while(HEAD.tg.length&&now-HEAD.tg[0].t>HEAD.WIN)HEAD.tg.shift();
  if(now<HEAD.cool||HEAD.s.length<3)return;
  const y0=HEAD.s[0].y,P=HEAD.s.map(o=>o.p),Y=HEAD.s.map(o=>Math.atan2(Math.sin(o.y-y0),Math.cos(o.y-y0)));
+ const nS=HEAD.s.filter(o=>now-o.t<=HEAD.NODWIN),Pn=nS.map(o=>o.p),Yn=nS.map(o=>Math.atan2(Math.sin(o.y-nS[0].y),Math.cos(o.y-nS[0].y)));
  const rng=a=>Math.max(...a)-Math.min(...a);
  let kind=null;
- if(rng(Y)<=HEAD.OTHER&&nodDown(P))kind='nod';
- else if(rng(P)<=HEAD.OTHER&&swingBack(Y,HEAD.A_SHAKE,HEAD.R_SHAKE))kind='shake';
+ if(nS.length>=3&&rng(Yn)<=HEAD.OTHER&&nodDown(Pn))kind='nod';
+ else if(rng(P)<=HEAD.OTHER&&swings(Y,HEAD.A_SWING)>=HEAD.SWINGS)kind='shake';
  if(!kind)return;
  const st=HEAD.tg.find(o=>o.g);const g=st&&st.g;
  HEAD.cool=now+HEAD.COOL;headReset();
@@ -3624,7 +3628,7 @@ function headStep(){
   if(isFav(g.fo))headHint('すでに選んでいます（首を振ると外れます）',true);
   else{const before=FAV.length;vrFav(g.fo);if(FAV.length>before)headHint('うなずき：☆素敵をつけました',true);}}
  else if(kind==='shake'&&g.t==='row'){
-  if(isFav(g.fo)){vrFav(g.fo);headHint('首ふり：素敵を外しました',true);}}
+  if(isFav(g.fo)){vrFav(g.fo);headHint('首ふり（2往復）：素敵を外しました',true);}}
  else if(kind==='shake'&&g.t==='frag'){const i=FR.list.findIndex(f=>f.k===g.k);if(i>=0)fragRemove(i);}}
 function vrStep(dt){
  bump();FOVT=null;
