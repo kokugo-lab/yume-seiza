@@ -3362,8 +3362,8 @@ const VR_DWELL=1.4,VR_EXIT=2.2;
 /* まん中の照準（見つめると輪が満ちていく） */
 const vrRet=new THREE.Group();
 (function(){
- const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:DOT_TEX,transparent:true,depthTest:false,opacity:.95}));
- dot.scale.setScalar(.5);vrRet.add(dot);
+ const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:DOT_TEX,color:0xff2a2a,transparent:true,depthTest:false,opacity:1}));
+ dot.scale.setScalar(.6);vrRet.add(dot);
  const cv=document.createElement('canvas');cv.width=cv.height=128;
  const tx=new THREE.CanvasTexture(cv);
  const rg=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
