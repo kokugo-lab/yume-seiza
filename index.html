@@ -3398,7 +3398,7 @@ function drawExit(k){const u=vrExit.userData,q=Math.round(k*30)/30;if(q===u.last
 function wrapJ(g,t,maxW){const out=[];let line='';
  for(const ch of [...t]){if(g.measureText(line+ch).width>maxW&&line){out.push(line);line=ch;}else line+=ch;}
  if(line)out.push(line);return out;}
-const VRP={W:1024,H:1180,PER:3,pad:48};
+const VRP={W:1024,H:1310,PER:3,pad:48,ROW:272,TOP:222};
 const VRF='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
 function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 function vrDrawPanel(){
@@ -3421,7 +3421,7 @@ function vrDrawPanel(){
   P.hot.push({id:'close',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>vrClosePanel(),hold:1.7});}
  const who=w.who||[],pages=Math.max(1,Math.ceil(who.length/VRP.PER));
  P.page=Math.max(0,Math.min(pages-1,P.page));
- const rowH=228;
+ const rowH=VRP.ROW;
  who.slice(P.page*VRP.PER,P.page*VRP.PER+VRP.PER).forEach((o,k)=>{
   const top=y+k*rowH,fo={q:o.fld,name:o.name,txt:o.txt},on=isFav(fo);
   if(VR.rowGaze===k){g.fillStyle='rgba(232,200,106,.2)';rrect(g,pad-16,top-8,W-pad*2+32,rowH-24,18);g.fill();}
@@ -3587,7 +3587,11 @@ const HEAD={A_NOD:.13,R_NOD:.09,A_SWING:.11,SWINGS:4,OTHER:.14,WIN:1.8,NODWIN:1.
 function headTarget(){
  if(FR.gaze>=0&&FR.list[FR.gaze])return {t:'frag',k:FR.list[FR.gaze].k};
  const P=VR.panel,hp=P&&vrPanelHit();
- if(hp&&hp.y>=212){const k=Math.floor((hp.y-222)/228),who=WORDS[P.i].who||[],o=who[P.page*VRP.PER+k];
+ if(hp&&hp.y>=VRP.TOP-14){
+  /* 行の幅を、上下に3割ずつ広げて粘る（うなずいて視線が下がっても、となりの文に移らない） */
+  const r=(hp.y-VRP.TOP)/VRP.ROW,who=WORDS[P.i].who||[];let k=Math.floor(r);
+  if(HEAD.row>=0&&r>=HEAD.row-.3&&r<HEAD.row+1.3)k=HEAD.row;
+  const o=who[P.page*VRP.PER+k];
   if(k>=0&&k<VRP.PER&&o)return {t:'row',k:k,fo:{q:o.fld,name:o.name,txt:o.txt}};}
  return null;}
 function swings(Y,A){/* 左右の振れの数（A以上の振れだけ数える）。2往復＝4回 */
@@ -3621,7 +3625,12 @@ function headStep(){
  if(nS.length>=3&&rng(Yn)<=HEAD.OTHER&&nodDown(Pn))kind='nod';
  else if(rng(P)<=HEAD.OTHER&&swings(Y,HEAD.A_SWING)>=HEAD.SWINGS)kind='shake';
  if(!kind)return;
- const st=HEAD.tg.find(o=>o.g);const g=st&&st.g;
+ let g=null;
+ if(kind==='nod'){let m=0;for(let i=1;i<Pn.length;i++)if(Pn[i]<Pn[m])m=i;
+  let top=0;for(let i=0;i<=m;i++)if(Pn[i]>Pn[top])top=i;
+  const t0=nS[top].t;let bd=9;HEAD.tg.forEach(o=>{if(o.g&&Math.abs(o.t-t0)<bd&&o.t<=t0+.15){bd=Math.abs(o.t-t0);g=o.g;}});
+  if(!g){const st=HEAD.tg.find(o=>o.g);g=st&&st.g;}}
+ else{const cnt={};let bestN=0;HEAD.tg.forEach(o=>{if(!o.g)return;const key=o.g.t+(o.g.k||'');cnt[key]=(cnt[key]||0)+1;if(cnt[key]>bestN){bestN=cnt[key];g=o.g;}});}
  HEAD.cool=now+HEAD.COOL;headReset();
  if(!g)return;
  if(kind==='nod'&&g.t==='row'){
