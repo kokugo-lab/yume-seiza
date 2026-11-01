@@ -3414,11 +3414,11 @@ function vrDrawPanel(){
  g.strokeStyle='rgba(107,102,92,.35)';g.lineWidth=2;g.beginPath();g.moveTo(pad,y);g.lineTo(W-pad,y);g.stroke();y+=18;
  P.hot=[];
  /* 閉じるボタン（右上） */
- {const bx=W-pad-230,by=pad-4,bw=230,bh=84,pr=(VR.hot==='close')?VR.ht/VR_PRESS:0;
+ {const bx=W-pad-230,by=pad-4,bw=230,bh=84,pr=(VR.hot==='close')?VR.ht/1.7:0;
   g.fillStyle='#2b4a6f';rrect(g,bx,by,bw,bh,42);g.fill();
   if(pr>0){g.save();rrect(g,bx,by,bw,bh,42);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
   g.fillStyle='#fff';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText('✕ 閉じる',bx+bw/2,by+bh/2+2);g.textAlign='left';g.textBaseline='top';
-  P.hot.push({id:'close',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>vrClosePanel()});}
+  P.hot.push({id:'close',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>vrClosePanel(),hold:1.7});}
  const who=w.who||[],pages=Math.max(1,Math.ceil(who.length/VRP.PER));
  P.page=Math.max(0,Math.min(pages-1,P.page));
  const rowH=228;
@@ -3572,8 +3572,8 @@ function vrHitMesh(mesh,W,H){
 function vrPress(hp,hot,draw,dt){
  const b=hot.find(o=>hp.x>=o.x&&hp.x<=o.x+o.w&&hp.y>=o.y&&hp.y<=o.y+o.h);const id=b?b.id:null;
  if(id!==VR.hot){const was=VR.hot;VR.hot=id;VR.ht=0;VR.done=false;draw();if(was)vrRedrawAll();}
- if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=VR_PRESS){VR.done=true;VR.ht=0;b.act();}else draw();}
- VR.gaze=-1;VR.gt=0;vrRing(b&&!VR.done?VR.ht/VR_PRESS:0);}
+ if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=(b.hold||VR_PRESS)){VR.done=true;VR.ht=0;b.act();}else draw();}
+ VR.gaze=-1;VR.gt=0;vrRing(b&&!VR.done?VR.ht/(b.hold||VR_PRESS):0);}
 function vrRedrawAll(){if(VR.panel)vrDrawPanel();}
 function vrStep(dt){
  bump();FOVT=null;
