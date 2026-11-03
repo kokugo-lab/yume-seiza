@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>足もとの小さな星を見つめると場所をかえられます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>足もとのまん丸の星の破片を見つめると、場所をかえられます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -2302,9 +2302,9 @@ function makeGrave(L){
  /* 星の破片：丸く、角の取れた石。ほのかに暖かい */
  const st=new THREE.Mesh(new THREE.SphereGeometry(1.9,40,24),new THREE.MeshPhongMaterial({color:0x6f6a63,
   specular:0x262626,shininess:18,emissive:0x1c1406}));
- st.scale.set(1,.88,.96);st.position.set(0,top+1.45,gz);g.add(st);
+ st.scale.set(1,.88,.96);st.position.set(0,top+1.45,gz);g.add(st);L.starFrag=st;
  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xffdca0,transparent:true,depthTest:false,
-  blending:THREE.AdditiveBlending,opacity:.06}));halo.scale.setScalar(5.5);halo.position.copy(st.position);halo.userData.halo=1;g.add(halo);
+  blending:THREE.AdditiveBlending,opacity:.06}));halo.scale.setScalar(5.5);halo.position.copy(st.position);halo.userData.halo=1;g.add(halo);L.starHalo=halo;
  const pl=new THREE.PointLight(0xffd59a,.32,26,1.6);pl.position.set(0,top+6,gz+5);g.add(pl);
  /* 大きな滑らかな縁の鋭い真珠貝 */
  const sh=makeShell(2.4);sh.position.set(5.6,landH(5.6,-16.5)+.05,-16.5);sh.rotation.set(.12,-.7,.05);g.add(sh);
@@ -3574,7 +3574,7 @@ function fragStep(dt){
  if(FR.yaw===null)FR.yaw=cy;
  if(FR.gaze<0){let d=cy-FR.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>.5)FR.yaw+=d*Math.min(1,dt*2);}
  const n=FR.list.length;let best=-1,bd=.085;
- FR.list.forEach((f,i)=>{const y=FR.yaw+(i-(n-1)/2)*.2,el=FR_EL+(i%2)*.04;
+ FR.list.forEach((f,i)=>{const y=FR.yaw+.62+(i-(n-1)/2)*.2,el=FR_EL+(i%2)*.04;
   f.sp.position.set(Math.sin(y)*Math.cos(el)*FR_R,Math.sin(el)*FR_R,Math.cos(y)*Math.cos(el)*FR_R);
   f.sp.visible=true;f.sp.material.opacity=.75+.25*Math.sin(T*2.1+f.ph);
   _vs.copy(f.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));if(a<bd){bd=a;best=i;}});
@@ -3701,10 +3701,10 @@ PL.sign=(function(){
  const lb=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false,opacity:0}));
  lb.scale.set(6,6*96/512,1);lb.renderOrder=995;lb.visible=false;scene.add(lb);
  return {sp:sp,lb:lb};})();
-/* k：見つめた進みぐあい（0〜1）、near：視線が近いか */
-function plSignDraw(k,near){const S=PL.sign;
- S.sp.scale.setScalar(1.5*(1+.9*k));S.sp.material.opacity=Math.min(1,(near?.75:.5)+.3*k)*(.92+.08*Math.sin(T*1.3));
- S.lb.material.opacity=near?Math.min(.85,.35+.6*k):0;}
+/* k：見つめた進みぐあい（0〜1）、near：視線が近いか。星の破片のまわりがほのかに明るくなる */
+function plSignDraw(k,near){const S=PL.sign,ST=PL.st;
+ if(ST&&ST.halo){ST.halo.material.opacity=.06+(near?.08:0)+.55*k;ST.halo.scale.setScalar(5.5*(1+.35*k));}
+ S.lb.material.opacity=near?Math.min(.85,.3+.6*k):0;}
 function plDraw(){
  const P=PL.panel;if(!P)return;
  const g=P.g,W=PLW,H=PLH,pad=48;
@@ -3738,9 +3738,10 @@ function plOpen(){
  const PW=38,PH=PW*PLH/PLW;
  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(PW,PH),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthTest:false,side:THREE.DoubleSide}));
  mesh.renderOrder=997;
- const y=PL.yaw+PL_OFF,el=-.42,R=46;/* 足もとを見ていた視線のすぐ上に開く（選択肢には重ならない） */
+ const ST=PL.st||plStone(),y=Math.atan2(ST.pos.x,ST.pos.z),sEl=Math.asin(ST.pos.y/ST.pos.length()),R=46;
+ const el=sEl+Math.atan(PH/2/R)+.1;/* 星の破片のすぐ上に開く（札の下の端が、破片より少し上） */
  mesh.position.set(Math.sin(y)*Math.cos(el)*R,Math.sin(el)*R,Math.cos(y)*Math.cos(el)*R);mesh.up.set(0,1,0);mesh.lookAt(0,0,0);
- scene.add(mesh);PL.panel={mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,away:0};plDraw();
+ scene.add(mesh);PL.panel={mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,away:0,arm:false};plDraw();
  try{chime(-1,784);}catch(e){}}
 function plClose(){const P=PL.panel;if(!P)return;scene.remove(P.mesh);P.tx.dispose();P.mesh.material.dispose();P.mesh.geometry.dispose();PL.panel=null;
  if(VR.hot&&String(VR.hot).indexOf('pl')===0){VR.hot=null;VR.ht=0;}}
@@ -3753,29 +3754,44 @@ function plGo(i){
 function plTitle(t){if(PL.lab){scene.remove(PL.lab);PL.lab.material.map.dispose();PL.lab.material.dispose();}
  const sp=label(t,'#f2ece0',5.5,0);camera.getWorldDirection(_vf);
  const yy=Math.atan2(_vf.x,_vf.z);sp.position.set(Math.sin(yy)*40,9,Math.cos(yy)*40);sp.renderOrder=998;scene.add(sp);PL.lab=sp;PL.labT=0;}
+/* 墓のない場所にも、同じまん丸の星の破片を足もとに一つ置く（VRのときだけ） */
+const VR_STONE=(function(){const g=new THREE.Group();
+ const st=new THREE.Mesh(new THREE.SphereGeometry(1.9,40,24),new THREE.MeshPhongMaterial({color:0x6f6a63,specular:0x262626,shininess:18,emissive:0x1c1406}));
+ st.scale.set(1,.88,.96);g.add(st);
+ const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xffdca0,transparent:true,depthTest:false,blending:THREE.AdditiveBlending,opacity:.06}));
+ halo.scale.setScalar(5.5);g.add(halo);
+ const pl=new THREE.PointLight(0xffd59a,.32,22,1.6);pl.position.set(0,4,4);g.add(pl);
+ g.visible=false;scene.add(g);return {g:g,st:st,halo:halo,for:-1};})();
+const _ps=new THREE.Vector3();
+function plStone(){
+ if(LAND&&LAND.starFrag){VR_STONE.g.visible=false;LAND.starFrag.getWorldPosition(_ps);return {pos:_ps,halo:LAND.starHalo,r:1.9};}
+ if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;const z=-20;VR_STONE.g.position.set(0,landH(0,z)+1.55,z);}
+ VR_STONE.g.visible=true;VR_STONE.st.getWorldPosition(_ps);return {pos:_ps,halo:VR_STONE.halo,r:1.9};}
 function plStep(dt,down){
- const S=PL.sign;S.sp.visible=true;
- camera.getWorldDirection(_vf);const cy=Math.atan2(_vf.x,_vf.z);
- if(PL.yaw===null)PL.yaw=cy;
- /* 見ようとして顔を向けても逃げない：下を見ているときは動かさず、正面を見て大きく向きを変えたときだけ、ゆっくりついてくる */
- if(!PL.gaze&&!PL.panel&&_vf.y>-.3){let d=cy-PL.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>.7)PL.yaw+=d*Math.min(1,dt*1.5);}
- const y=PL.yaw+PL_OFF;S.sp.position.set(Math.sin(y)*Math.cos(PL_EL)*PL_R,Math.sin(PL_EL)*PL_R,Math.cos(y)*Math.cos(PL_EL)*PL_R);
- S.lb.visible=true;S.lb.position.copy(S.sp.position).multiplyScalar(.97).add(_vu.set(0,-2.2,0));
+ const S=PL.sign;S.sp.visible=false;
+ camera.getWorldDirection(_vf);
+ const ST=plStone();PL.st=ST;
+ S.lb.visible=true;S.lb.position.copy(ST.pos).add(_vu.set(0,3.6,0));
  /* 着いた場所の名前（ふわっと出て消える） */
  if(PL.lab){PL.labT+=dt;const a=PL.labT<.6?PL.labT/.6:PL.labT<2.4?1:Math.max(0,1-(PL.labT-2.4)/.8);PL.lab.material.opacity=a*.95;
   if(PL.labT>3.3){scene.remove(PL.lab);PL.lab.material.map.dispose();PL.lab.material.dispose();PL.lab=null;}}
  if(down){PL.gaze=false;PL.t=0;plSignDraw(0,false);return false;}
+ camera.getWorldDirection(_vf);
  /* 場所の札が開いているとき */
  if(PL.panel){const hp=vrHitMesh(PL.panel.mesh,PLW,PLH);
+  /* 開いた直後は、視線が選択肢から一度はなれるまで押さない（星を見ていた視線で選んでしまわないように） */
+  if(hp&&!PL.panel.arm){if(!PL.hot.some(o=>hp.x>=o.x&&hp.x<=o.x+o.w&&hp.y>=o.y&&hp.y<=o.y+o.h))PL.panel.arm=true;else return true;}
+  if(!hp)PL.panel.arm=true;
   if(hp){PL.panel.away=0;vrPress(hp,PL.hot,plDraw,dt);return true;}
   PL.panel.away+=dt;if(PL.panel.away>2.2)plClose();}
- /* 足もとの星を見つめる */
- _vs.copy(S.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
- PL.gaze=a<.1;const near=a<.25;
+ /* 足もとのまん丸の星の破片を見つめる */
+ const dist=ST.pos.length();_vs.copy(ST.pos).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
+ const tol=Math.atan(ST.r*1.15/dist)+.025;
+ PL.gaze=a<tol;const near=a<tol*2.4;
  if(PL.gaze&&!PL.panel){PL.t+=dt;plSignDraw(Math.min(1,PL.t/PL_HOLD),true);vrRing(0);VR.gaze=-1;VR.gt=0;
   if(PL.t>=PL_HOLD){PL.t=0;plSignDraw(0,true);plOpen();}return true;}
  PL.t=0;plSignDraw(0,near);return false;}
-function plHide(){plClose();PL.sign.sp.visible=false;PL.sign.lb.visible=false;PL.gaze=false;PL.t=0;
+function plHide(){plClose();PL.sign.sp.visible=false;PL.sign.lb.visible=false;VR_STONE.g.visible=false;if(PL.st&&PL.st.halo){PL.st.halo.material.opacity=.06;PL.st.halo.scale.setScalar(5.5);}PL.gaze=false;PL.t=0;
  if(PL.lab){scene.remove(PL.lab);PL.lab=null;}}
 function vrStep(dt){
  bump();FOVT=null;
