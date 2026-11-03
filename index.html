@@ -2205,7 +2205,7 @@ function landColor(x,z,h,slope,kind,out){
   if(slope>.75)out.lerp(_c2.setRGB(.22,.23,.27),sm(.75,1.2,slope));}
  else if(kind==='beach'){
   const a=SEA_AZ*Math.PI/180,along=x*Math.sin(a)-z*Math.cos(a);
-  if(h<-14.8&&along>-30){out.setRGB(.5+m*.08,.45+m*.07,.36+m*.05);           /* 砂 */
+  if(h<-14.8&&along>-30){out.setRGB(.56+m*.09+n*.04,.49+m*.08+n*.03,.37+m*.05);  /* 砂 */
    if(h<SEA_Y+1.5)out.lerp(_c2.setRGB(.28,.26,.23),sm(SEA_Y+1.5,SEA_Y-.5,h));} /* ぬれた砂 */
   else out.setRGB(.13+n*.1,.19+n*.08,.1);                                     /* 浜の草地 */
   if(slope>.7)out.lerp(_c2.setRGB(.25,.24,.24),sm(.7,1.1,slope));}
@@ -2245,18 +2245,98 @@ const MOON_TEX=mkTex((g,s)=>{const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/
 let LILY_PT=null,LILY_LT=null;
 
 /* ── 海 ── */
+/* 浜の水深を、浜をつくる式（landH）から一度だけ焼いておく。
+   海の色・波の向き・砕ける波・波打ち際の泡を、ここから決める。
+   浅いところほど細かく測れるよう、平方根で詰めて8ビットに入れる。 */
+const BEACH_EXT=420;let BEACH_DEP=null;
+function beachDepthTex(){
+ if(BEACH_DEP)return BEACH_DEP;
+ const N=320,E=BEACH_EXT,data=new Uint8Array(N*N*4);
+ for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+  const x=-E+(i+.5)*2*E/N,z=-E+(j+.5)*2*E/N,d=SEA_Y-landH(x,z,'beach');
+  const q=Math.max(-1,Math.min(1,Math.sign(d)*Math.sqrt(Math.abs(d)/30))),k=(j*N+i)*4;
+  data[k]=Math.round((q*.5+.5)*255);data[k+1]=data[k+2]=0;data[k+3]=255;}
+ const t=new THREE.DataTexture(data,N,N,THREE.RGBAFormat);
+ t.magFilter=t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;t.needsUpdate=true;
+ BEACH_DEP=t;return t;}
+const GL_NOISE='float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}'+
+ 'float vn2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);'+
+ 'return mix(mix(hs(i),hs(i+vec2(1.,0.)),f.x),mix(hs(i+vec2(0.,1.)),hs(i+vec2(1.,1.)),f.x),f.y);}';
+
+/* ── 海 ── */
+/* 寄せては返す：海面がゆっくり上下して、波打ち際が砂の上を行き来する（砂の「ぬれ」と同じ式） */
+const SWASH_GL='(.22*sin(t*.55)+.1*sin(t*1.27+1.3))';
 function seaMaterial(moonDir,haze){
  return new THREE.ShaderMaterial({
-  uniforms:{t:{value:0},moon:{value:moonDir.clone()},haze:{value:new THREE.Color(haze)}},
-  vertexShader:'varying vec3 wp;void main(){vec4 w=modelMatrix*vec4(position,1.);wp=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-  fragmentShader:'uniform float t;uniform vec3 moon;uniform vec3 haze;varying vec3 wp;'+
-   'void main(){vec2 p=wp.xz*.06;'+
-   'vec3 n=normalize(vec3(cos(p.x*1.7+t*.9)*.07+cos((p.x+p.y)*3.1+t*1.6)*.05+cos(p.x*7.3-t*2.1)*.03,1.,'+
-   'cos(p.y*2.3-t*1.1)*.07+cos((p.y-p.x)*4.7+t*1.3)*.04));'+
-   'vec3 v=normalize(wp-cameraPosition);vec3 r=reflect(v,n);'+
-   'float g=pow(max(dot(r,moon),0.),220.);float f=pow(1.-max(dot(-v,vec3(0.,1.,0.)),0.),4.);'+
-   'vec3 c=mix(vec3(.015,.04,.08),vec3(.07,.12,.21),f)+vec3(1.,.96,.86)*g*2.2;'+
-   'c=mix(c,haze,smoothstep(250.,1100.,length(wp.xz))*.8);gl_FragColor=vec4(c,1.);}'});}
+  transparent:true,
+  uniforms:{t:{value:0},moon:{value:moonDir.clone()},haze:{value:new THREE.Color(haze)},dep:{value:beachDepthTex()},ext:{value:BEACH_EXT}},
+  vertexShader:'uniform float t;varying vec3 wp;void main(){vec4 w=modelMatrix*vec4(position,1.);'+
+   'w.y+='+SWASH_GL+';wp=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+  fragmentShader:'uniform float t;uniform vec3 moon;uniform vec3 haze;uniform sampler2D dep;uniform float ext;varying vec3 wp;'+GL_NOISE+
+   'float depthAt(vec2 xz){vec2 uv=(xz+ext)/(2.*ext);'+
+   ' if(uv.x<0.||uv.y<0.||uv.x>1.||uv.y>1.)return 30.;float q=texture2D(dep,uv).r*2.-1.;return sign(q)*q*q*30.;}'+
+   'void main(){'+
+   ' float sw='+SWASH_GL+';'+
+   ' vec2 p=wp.xz;float dist=length(p-cameraPosition.xz);float lod=1.-smoothstep(120.,650.,dist);'+
+   /* いまの水深（寄せ返しを含む）と、沖の向き */
+   ' float d0=depthAt(p),d=d0+sw;'+
+   ' vec2 e=vec2(2.,0.);vec2 gd=vec2(depthAt(p+e.xy)-depthAt(p-e.xy),depthAt(p+e.yx)-depthAt(p-e.yx));'+
+   ' vec2 dir=dot(gd,gd)>1e-5?normalize(gd):vec2(.342,-.94);'+
+   ' float sh=1.-smoothstep(1.,14.,d0);'+
+   /* うねり：沖から岸へ寄せる。浅いほど背が高く、間隔が詰まる */
+   ' float k1=mix(.075,.13,sh),ph=dot(p,dir)*k1+t*1.05+1.8*vn2(p*.012);'+
+   ' float A1=mix(.08,.2,sh);'+
+   ' vec2 sl=-dir*A1*cos(ph)*(1.+sh);'+
+   /* 横からの小さな波と、細かいさざなみ（遠くでは消す） */
+   ' sl+=vec2(cos(p.x*.21+t*.9),cos(p.y*.17-t*1.1))*.045;'+
+   ' sl+=vec2(cos((p.x+p.y)*.53+t*1.7),cos((p.y-p.x)*.61-t*1.5))*.03*lod;'+
+   ' sl+=(vec2(vn2(p*.9+t*.6),vn2(p.yx*.9-t*.5))-.5)*.09*lod;'+
+   ' vec3 n=normalize(vec3(sl.x,1.,sl.y));'+
+   ' vec3 v=normalize(wp-cameraPosition);vec3 r=reflect(v,n);float rm=max(dot(r,moon),0.);'+
+   ' float g=pow(rm,220.)*2.2+pow(rm,36.)*.25;'+
+   ' g+=pow(rm,900.)*step(.82,hs(floor(p*3.)+floor(t*6.)))*3.*lod;'+
+   ' float f=pow(1.-max(dot(-v,vec3(0.,1.,0.)),0.),4.);'+
+   ' vec3 deep=mix(vec3(.012,.035,.07),vec3(.07,.12,.21),f);'+
+   ' vec3 c=mix(deep,vec3(.05,.12,.13),sh*.7)+vec3(1.,.96,.86)*g;'+
+   /* 砕ける波：浅瀬で、うねりの山が白く崩れる。途切れ途切れに。崩れたあとに泡が残る */
+   ' float crest=smoothstep(.86,.985,sin(ph+.6));'+
+   ' float br=crest*smoothstep(7.5,2.2,d0)*smoothstep(.25,1.,d)*smoothstep(.3,.62,vn2(p*.22+vec2(t*.15,-t*.1)));'+
+   ' float trail=smoothstep(.2,.9,sin(ph+1.6))*smoothstep(5.,1.2,d0)*smoothstep(.5,.8,vn2(p*.7+t*.2))*.28;'+
+   /* 波打ち際のレース状の泡と、水ぎわの細い白線 */
+   ' float lace=(1.-smoothstep(0.,.8,d))*smoothstep(.5,.85,vn2(p*1.1+vec2(t*.35,0.))+vn2(p*2.7-t*.4)*.3)*.75;'+
+   ' float edge=(1.-smoothstep(0.,.3,d))*(.55+.45*vn2(p*.9+t*.5));'+
+   ' float foam=clamp(max(max(br,trail),max(lace,edge*.6)),0.,1.)*lod;'+
+   ' vec3 fc=vec3(.62,.68,.74)+vec3(.25,.24,.2)*pow(max(dot(reflect(v,vec3(0.,1.,0.)),moon),0.),6.);'+
+   ' c=mix(c,fc,foam);'+
+   ' c=mix(c,haze,smoothstep(250.,1100.,length(p))*.8);'+
+   /* 浅いところは透けて、ぬれた砂が見える */
+   ' float a=mix(.35,1.,smoothstep(0.,2.2,d));a=max(a,foam);a*=smoothstep(-.05,.05,d);'+
+   ' gl_FragColor=vec4(c,a);}'});}
+
+/* 砂：風紋と粒、波が引いたあとのぬれた砂の暗さと、そこに映る月明かり（浜のときだけ） */
+function sandMaterial(moonDir){
+ const U={t:{value:0},uMoon:{value:moonDir.clone()}};
+ const m=new THREE.MeshLambertMaterial({vertexColors:true,map:DETAIL_TEX});
+ m.onBeforeCompile=sh=>{
+  sh.uniforms.t=U.t;sh.uniforms.uMoon=U.uMoon;
+  sh.vertexShader='varying vec3 vWp;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
+  sh.fragmentShader='uniform float t;uniform vec3 uMoon;varying vec3 vWp;\n'+GL_NOISE+'\n'+sh.fragmentShader
+   .replace('#include <color_fragment>','#include <color_fragment>\n'+
+    'float sandy=smoothstep(.0,.04,(vColor.r-vColor.g)+(vColor.r-vColor.b)*.5);\n'+
+    'vec2 q=vWp.xz;float dcam=length(q-cameraPosition.xz);float lodS=1.-smoothstep(40.,160.,dcam);\n'+
+    'float rip=mix(.5,sin(dot(q,vec2(.92,.38))*(1.5+.5*vn2(q*.03))+vn2(q*.05)*9.+vn2(q*.4)*1.5)*.5+.5,(.35+.65*vn2(q*.045))*(1.-smoothstep(30.,110.,dcam)));\n'+     /* 風紋 */
+    'float grain=hs(floor(q*16.));\n'+
+    'float wl='+SEA_Y.toFixed(1)+'+'+SWASH_GL+';\n'+
+    'float wetD=1.-smoothstep(wl+.05,wl+2.,vWp.y);\n'+                          /* 波が引いたあと、しばらくぬれている */
+    'float wet=sandy*max(wetD,(1.-smoothstep('+(SEA_Y+.3).toFixed(1)+','+(SEA_Y+2.6).toFixed(1)+',vWp.y))*.55);\n'+
+    'diffuseColor.rgb*=mix(1.,(.94+.08*rip*(1.-wet*.7))*(.92+.12*grain*lodS)*(.95+.1*vn2(q*.08)),sandy);\n'+
+    'diffuseColor.rgb*=mix(1.,.55,wet);')
+   .replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );','gl_FragColor = vec4( outgoingLight, diffuseColor.a );\n'+
+    'vec3 vv=normalize(vWp-cameraPosition);vec3 nn=normalize(vec3(.05*(rip-.5)+.03*(vn2(q*2.)-.5),1.,.03*(vn2(q.yx*2.)-.5)));\n'+
+    'float spw=pow(max(dot(reflect(vv,nn),uMoon),0.),70.)*wet*1.3;\n'+                 /* ぬれた砂に映る月 */
+    'float spd=step(.985,grain)*pow(max(dot(reflect(vv,vec3(0.,1.,0.)),uMoon),0.),4.)*sandy*(1.-wet)*.22*lodS;\n'+ /* 砂粒のきらり */
+    'gl_FragColor.rgb+=vec3(.85,.88,.95)*(spw+spd);');};
+ m.userData.U=U;return m;}
 
 /* ── 岩 ── */
 function makeRock(size,snowy,seed){
@@ -2352,8 +2432,9 @@ function buildLand(i){
   const sl=Math.hypot(landH(x+2,z,kind)-h,landH(x,z+2,kind)-h)/2;
   pa.setXYZ(k,x,h,z);landColor(x,z,h,sl,kind,_c);col[k*3]=_c.r;col[k*3+1]=_c.g;col[k*3+2]=_c.b;}
  geo.computeVertexNormals();geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
- const ground=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,map:DETAIL_TEX}));
- L.g.add(ground);L.ground=ground;L.keep=ground.material.map;
+ const gmat=kind==='beach'?sandMaterial(md||dirOf(SEA_AZ,10)):new THREE.MeshLambertMaterial({vertexColors:true,map:DETAIL_TEX});
+ const ground=new THREE.Mesh(geo,gmat);
+ L.g.add(ground);L.ground=ground;L.keep=ground.material.map;if(gmat.userData.U)L.sandU=gmat.userData.U;
  /* 海 */
  if(kind==='beach'){
   const sm2=seaMaterial(md||dirOf(SEA_AZ,10),P.haze);
@@ -2535,8 +2616,9 @@ function landTapHit(hit){
 function stepLand(dt){
  if(!LAND)return;
  stepAmbient(dt);stepLifts(dt);
+ if(LAND.sandU)LAND.sandU.t.value=T;
  LAND.halos.forEach(h=>{h.material.opacity=.6+.35*Math.sin(T*3.1);});
- LAND.g.children.forEach(c=>{if(c.isGroup)c.children.forEach(d=>{if(d.userData.halo)d.material.opacity=.05+.03*Math.sin(T*1.7);});});
+ LAND.g.children.forEach(c=>{if(c.isGroup)c.children.forEach(d=>{if(d.userData.halo&&!d.userData.vr)d.material.opacity=.05+.03*Math.sin(T*1.7);});});
  LAND.shells.forEach((s,i)=>{const gl=s.userData.glint;if(gl)gl.material.opacity=Math.pow(Math.max(0,Math.sin(T*1.3+i*2.1)),12)*.6;});}
 
 /* ── 場所の切りかえ ── */
@@ -3703,7 +3785,7 @@ PL.sign=(function(){
  return {sp:sp,lb:lb};})();
 /* k：見つめた進みぐあい（0〜1）、near：視線が近いか。星の破片のまわりがほのかに明るくなる */
 function plSignDraw(k,near){const S=PL.sign,ST=PL.st;
- if(ST&&ST.halo){ST.halo.material.opacity=.06+(near?.08:0)+.55*k;ST.halo.scale.setScalar(5.5*(1+.35*k));}
+ if(ST&&ST.halo){ST.halo.userData.vr=!!(near||k>0);ST.halo.material.opacity=.06+(near?.08:0)+.55*k;ST.halo.scale.setScalar(5.5*(1+.35*k));}
  S.lb.material.opacity=near?Math.min(.85,.3+.6*k):0;}
 function plDraw(){
  const P=PL.panel;if(!P)return;
