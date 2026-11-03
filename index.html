@@ -2168,13 +2168,13 @@ const PLACES=[
  {n:'雪の夜',d:'しんしんと雪の降る夜。野も岩も白くおおわれている。地面をタップすると雪が舞い上がる。',
   sky:[0x0b1020,0x2d364b],haze:0x2a3246,land:'snow',par:'snow',moon:null,flowers:0,tufts:0,rocks:24,
   hemi:[0x7c88a8,0x2e333e,1.05],moonI:0},
- {n:'暁の丘',d:'夜の丘の上。しばらくいると、東の空がだんだん白んで、暁の星がたった一つ瞬きはじめる。',
+ {n:'暁の丘',d:'夜の丘の上。一分ほどで東の空がだんだん白んで、暁の星がたった一つ瞬きはじめる。',
   sky:[0x050a1c,0x16203c],haze:0x0c1426,dawnTo:{sky:[0x2a3c6e,0xd8906c],haze:0x6e4c5c},land:'hill',par:'dew',moon:null,dawn:true,flowers:80,tufts:2300,rocks:12,
   hemi:[0x7d6c98,0x1c150f,1.05],moonI:0},
- {n:'夜の崖',d:'海に切り立つ崖の上。はるか下の暗い海で、白い波が砕けている。風が強く、草が一方へなびく。',
+ {n:'夜の崖',d:'海へ突き出た岬の先。足もとから三十ｍあまりの断崖が落ち、はるか下の岩に白い波が砕ける。風が強く、草が一方へなびく。',
   sky:[0x050914,0x182640],haze:0x0b1729,land:'cliff',par:'none',moon:[18,20,85],flowers:0,tufts:2400,rocks:10,
   hemi:[0x40557f,0x0a0d08,.85],moonI:.7},
- {n:'凪いだ湖',d:'風のない夜の湖のほとり。鏡のような湖面に、夜空の星も言葉の星も、そのまま映りこむ。',
+ {n:'凪いだ湖',d:'風のない夜の大きな湖。はるか向こうの山なみまで、鏡のような湖面がつづき、夜空の星も言葉の星も映りこむ。',
   sky:[0x040816,0x152038],haze:0x0b1426,land:'lake',par:'firefly',moon:[345,24,70],flowers:30,tufts:1800,rocks:10,
   hemi:[0x46598a,0x0b1208,.85],moonI:.6},
  {n:'雲の上の峰',d:'雲海の上に突き出た山の頂。足もとを白い雲がゆっくり流れ、遠くの峰だけが雲から顔を出す。',
@@ -2190,25 +2190,31 @@ try{PLACE=Math.min(PLACES.length-1,Math.max(0,parseInt(localStorage.getItem('yum
 
 /* ── 高さ ── */
 /* ── 新しい場所の地形 ── */
-const CLIFF_SEA=-170,LAKE_Y=-17,LAKE_C=84,CLOUD_Y=-125;
+/* 崖：入り江に突き出た岬の先に立つ。足もとの約9先で、高さ約33ｍの断崖が海へ落ちる。
+   入り江の左右の腕は、前へ回りこんで、こちらに岩肌を向けている */
+const CLIFF_SEA=-330,LAKE_Y=-17,CLOUD_Y=-125;
+const cliffEdge=x=>{const a=Math.abs(x);return 9-54*sm(0,70,a)+300*sm(90,300,a)+3*Math.sin(x*.13)+5*(fbm(x*.04+2,7.3,3)-.5)*(1+sm(80,250,a))+22*(fbm(x*.011+8,1.7,3)-.5)*sm(70,220,a);};
+/* 湖：手前の岸から、はるか向こうの低い山なみまで水が広がる */
+const lakeShore=x=>7+.0009*x*x+3*Math.sin(x*.05)+3*(fbm(x*.03+5,2.2,2)-.5);
 const bambooPathX=z=>5*Math.sin(z*.035)+2*Math.sin(z*.011);
 const PEAKS=[[40,620,-62,150],[150,820,-38,210],[248,700,-80,170],[318,900,-48,230],[95,1000,-30,260]];
 function landH2(x,z,kind,r,h,far){
  if(kind==='cliff'){
-  /* 正面（北）に向かって約40で崖。その先は海の底へ */
-  const along=-z,edge=27+7*Math.sin(x*.035)+8*(fbm(x*.02+4,1.3,3)-.5),t=along-edge;
-  if(t>0){h=-16-sm(0,15,t)*168+(fbm(x*.06,z*.06,3)-.5)*7*sm(0,6,t)*(1-sm(9,15,t));}
-  else h+=sm(40,330,-along)*(fbm(x*.0045+2,z*.0045+7,4)-.38)*90+far*sm(0,-200,along);
-  /* 遠く左右に、海へ突き出た岬 */
-  const side=sm(380,720,Math.abs(x))*sm(60,320,along);
-  if(side>0)h=Math.max(h,-184+side*(95+55*fbm(x*.008,z*.008,3)));
+  const along=-z,t=along-cliffEdge(x);
+  if(t>-(1+.02*r)){/* 海の側：崖の根もとは浅く、沖へ深くなる（波が根もとで白く砕ける） */
+   return CLIFF_SEA-1.2-sm(0,70,t)*22;}
+  h+=sm(30,330,-along)*(fbm(x*.0045+2,z*.0045+7,4)-.38)*90+far*sm(0,-200,along);
+  h-=sm(-14,-1.5,t)*1.2;                                                        /* ふちは少しだけ下がる */
   return h;}
  if(kind==='lake'){
-  const dz=z+LAKE_C,r2=Math.hypot(x*.78,dz),ang=Math.atan2(dz,x);
-  const shoreR=74+6*Math.sin(ang*3+.7)+5*(fbm(x*.02,z*.02,2)-.5);
-  h+=sm(45,330,r)*(fbm(x*.0045+2,z*.0045+7,4)-.42)*70+far;
-  const bowl=sm(shoreR+14,shoreR-10,r2);
-  return h*(1-bowl)+(LAKE_Y-1.5-sm(shoreR,shoreR-40,r2)*12)*bowl;}
+  const along=-z,t=along-lakeShore(x);
+  if(t<0)return h+sm(45,330,r)*(fbm(x*.0045+2,z*.0045+7,4)-.42)*70*sm(0,-60,t)+far*sm(0,-200,along);
+  /* 水の下。はるか向こう（約1000先）で、低い山なみが水から立ち上がる */
+  let w=LAKE_Y-1.2-sm(0,25,t)*10;
+  const fs=sm(880,1120,along+.25*Math.abs(x)),side=sm(700,1050,Math.abs(x))*sm(-100,300,along);
+  const m=Math.max(fs,side);
+  if(m>0)w=Math.max(w,LAKE_Y-4+m*(26+60*Math.pow(fbm(x*.006+3,z*.006+1,4),1.6)));
+  return w;}
  if(kind==='peak'){
   const n1=fbm(x*.012+7,z*.012+3,4);
   h=-16+(fbm(x*.07+3.3,z*.07+1.7,3)-.5)*1.4*sm(4,14,r);
@@ -2222,28 +2228,68 @@ function landH2(x,z,kind,r,h,far){
  return null;}
 function landColor2(x,z,h,slope,kind,out,n,m,r){
  if(kind==='peak'){
-  out.setRGB(.19+m*.07,.19+m*.07,.21+m*.07);                                   /* 岩 */
-  if(r<45&&n>.5&&slope<.5)out.lerp(_c2.setRGB(.1,.17,.09),.75);               /* 頂の草 */
-  if(r>300&&h>-95)out.lerp(_c2.setRGB(.72,.76,.84),sm(-95,-70,h));            /* 遠い峰の雪 */
+  out.setRGB(.19+m*.07,.19+m*.07,.21+m*.07);
+  if(r<45&&n>.5&&slope<.5)out.lerp(_c2.setRGB(.1,.17,.09),.75);
+  if(r>300&&h>-95)out.lerp(_c2.setRGB(.72,.76,.84),sm(-95,-70,h));
   return true;}
  if(kind==='bamboo'){
   const dp=Math.abs(x-bambooPathX(z));
-  out.setRGB(.13+n*.05,.12+n*.04,.07+n*.02);                                   /* 落ち葉 */
-  out.lerp(_c2.setRGB(.08,.15,.07),m*.5);                                       /* 苔 */
-  if(dp<2.6)out.lerp(_c2.setRGB(.25+m*.05,.21+m*.04,.15+m*.03),sm(2.6,1.2,dp)); /* 小径 */
+  out.setRGB(.13+n*.05,.12+n*.04,.07+n*.02);
+  out.lerp(_c2.setRGB(.08,.15,.07),m*.5);
+  if(dp<2.6)out.lerp(_c2.setRGB(.25+m*.05,.21+m*.04,.15+m*.03),sm(2.6,1.2,dp));
   return true;}
  if(kind==='lake'){
   out.setRGB(.1+n*.09,.2+n*.1,.09+n*.03);
-  if(h<LAKE_Y+1.2)out.lerp(_c2.setRGB(.24+m*.06,.23+m*.05,.21+m*.04),sm(LAKE_Y+1.2,LAKE_Y+.2,h));  /* 小石の岸 */
+  if(h<LAKE_Y+1.2)out.lerp(_c2.setRGB(.24+m*.06,.23+m*.05,.21+m*.04),sm(LAKE_Y+1.2,LAKE_Y+.2,h));
+  if(r>700)out.lerp(_c2.setRGB(.08,.1,.12),.6);                                  /* 遠い山なみ */
   if(slope>.65)out.lerp(_c2.setRGB(.24,.24,.25),sm(.65,1.1,slope));
   return true;}
  if(kind==='cliff'){
+  if(h<CLIFF_SEA+20){out.setRGB(.12,.12,.12);return true;}
   out.setRGB(.09+n*.07,.17+n*.08,.08+n*.03);
   out.lerp(_c2.setRGB(.2,.2,.13),m*.3);
-  if(slope>.55)out.lerp(_c2.setRGB(.2+m*.05,.19+m*.05,.19+m*.05),sm(.55,1.,slope));  /* 岩の崖 */
-  if(h<CLIFF_SEA+6)out.setRGB(.1,.1,.11);
+  if(slope>.55)out.lerp(_c2.setRGB(.2+m*.05,.19+m*.05,.19+m*.05),sm(.55,1.,slope));
   return true;}
  return false;}
+
+/* 断崖の岩肌：崖のふちに沿って、海面の下まで垂直の壁を張る。地層の縞、でこぼこ、根もとの崩れた岩、ぬれた黒い裾 */
+function makeCliffWall(L){
+ const X0=-430,X1=430,NX=560,NY=90,top=-15.2,bot=CLIFF_SEA-14,H=top-bot;
+ const pos=new Float32Array((NX+1)*(NY+1)*3),col=new Float32Array((NX+1)*(NY+1)*3),idx=[];
+ const cc=new THREE.Color(),c2=new THREE.Color();
+ for(let i=0;i<=NX;i++){
+  const x=X0+(X1-X0)*i/NX,e=cliffEdge(x),e2=cliffEdge(x+.5);
+  /* 曲線の向きから、海の側への向き（水平）を出す */
+  let nx=-(e2-e)/.5,nz=-1;const nl=Math.hypot(nx,nz);nx/=nl;nz/=nl;
+  for(let j=0;j<=NY;j++){
+   const v=Math.max(0,(j-1)/(NY-1)),y=j===0?-16.6:top-1.6-(H-1.6)*Math.pow(v,1.15);
+   const depthF=(top-y)/H;
+   /* 岩肌：大きなひだ（張り出しと入りこみ）、縦の溝、ななめの地層、細かいでこぼこ。下へ行くほど少し海へ張り出す */
+   const xs=x+y*.15;
+   let d=9*(fbm(xs*.013+1.3,y*.006,3)-.5)+4.5*Math.pow(Math.abs(Math.sin(xs*.06+2.5*fbm(xs*.02,y*.008,2))),.6)
+     +1.6*Math.sin(y*.3+xs*.04+3*fbm(xs*.02,y*.01,2))*sm(.05,.2,depthF)
+     +1.4*(fbm(xs*.11+5,y*.07,3)-.5)*sm(.02,.1,depthF)
+     +depthF*14*(.4+fbm(x*.02,4.2,2));
+   d+=Math.pow(sm(.82,1,depthF),2)*26*(.6+.8*fbm(x*.03,3.1,2));                 /* 根もとの崩れた岩 */
+   const far=Math.hypot(x,e);
+   d=j===0?-(1.6+.022*far):Math.max(d+1.2,1.4);                                 /* 一番上は地面へかぶせる（すき間を出さない） */
+   const k=(i*(NY+1)+j)*3;pos[k]=x+nx*d;pos[k+1]=y;pos[k+2]=-e+nz*d;
+   /* 色：灰褐色の岩、地層の縞、上は草と地衣、下はぬれて黒い */
+   const st=fbm(x*.01,y*.03,3),band=.5+.5*Math.sin((y+x*.12)*.42+st*5),strk=fbm(x*.09,y*.006,2);
+   cc.setRGB(.27+st*.1,.25+st*.08,.22+st*.07).multiplyScalar(.86+.18*band);
+   cc.multiplyScalar(.8+.4*strk);                                                 /* 雨水の縦すじ */
+   cc.lerp(c2.setRGB(.38,.35,.3),.3*Math.max(0,fbm(x*.05+3,y*.05,3)-.45)*2);
+   if(depthF<.04||j===0)cc.lerp(c2.setRGB(.1,.17,.08),j===0?.9:sm(.04,0,depthF)*.85);
+   if(y<CLIFF_SEA+9)cc.lerp(c2.setRGB(.06,.065,.07),sm(CLIFF_SEA+9,CLIFF_SEA+1,y));
+   col[k]=cc.r;col[k+1]=cc.g;col[k+2]=cc.b;}}
+ for(let i=0;i<NX;i++)for(let j=0;j<NY;j++){const a=i*(NY+1)+j,b=a+NY+1;idx.push(a,a+1,b,b,a+1,b+1);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.setIndex(idx);g.computeVertexNormals();
+ const wall=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+ L.g.add(wall);
+ /* 沖の岩（離れ岩） */
+ [[-30,60,24],[45,110,32],[-120,150,28],[110,200,22],[0,330,40],[-210,120,26]].forEach(([dx,dt,sz],k)=>{
+  const x=dx,z=-(cliffEdge(x)+dt);const rk=makeRock(sz,false,k*9.1+3);rk.scale.y*=1.8;rk.position.set(x,CLIFF_SEA-sz*.3,z);L.g.add(rk);});}
 function landH(x,z,kind){
  kind=kind||landKind;
  const r=Math.hypot(x,z);
@@ -2540,11 +2586,11 @@ function buildExtras(L,P,kind,md){
  if(kind==='cliff'){
   const mt=seaMaterial(mdir,P.haze,'cliff',CLIFF_SEA);
   const sea=new THREE.Mesh(new THREE.CircleGeometry(1300,64),mt);sea.rotation.x=-Math.PI/2;sea.position.y=CLIFF_SEA;
-  L.g.add(sea);L.sea=sea;L.waters.push(mt);}
+  L.g.add(sea);L.sea=sea;L.waters.push(mt);makeCliffWall(L);}
  if(kind==='lake'){
   const rt=new THREE.WebGLRenderTarget(640,640,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
   const mt=lakeMaterial(mdir,P.haze,rt);
-  const w=new THREE.Mesh(new THREE.CircleGeometry(170,96),mt);w.rotation.x=-Math.PI/2;w.position.set(0,LAKE_Y,-LAKE_C);
+  const w=new THREE.Mesh(new THREE.CircleGeometry(1300,128),mt);w.rotation.x=-Math.PI/2;w.position.set(0,LAKE_Y,0);
   L.g.add(w);L.sea=w;L.waters.push(mt);L.lake={mesh:w,rt:rt,mat:mt};}
  if(kind==='peak'){
   [[CLOUD_Y,.0038,.012,.97],[CLOUD_Y+22,.0062,.02,.42]].forEach(([y,sc,sp,al])=>{
@@ -2670,6 +2716,7 @@ function buildLand(i){
    const a=Math.random()*6.283,r=2.5+Math.pow(Math.random(),1.7)*180,x=Math.cos(a)*r,z=Math.sin(a)*r,h=landH(x,z,kind);
    if(h<SEA_Y+.8)continue;
    if(kind==='lake'&&h<LAKE_Y+.4)continue;
+   if(kind==='cliff'&&h<-30)continue;
    if(kind==='peak'&&h<CLOUD_Y)continue;
    if(kind==='bamboo'&&Math.abs(x-bambooPathX(z))<2.4)continue;
    if(kind==='grave'&&Math.abs(x)<7&&z<-13&&z>-31)continue;
@@ -2847,10 +2894,10 @@ function stepLand(dt){
  LAND.shells.forEach((s,i)=>{const gl=s.userData.glint;if(gl)gl.material.opacity=Math.pow(Math.max(0,Math.sin(T*1.3+i*2.1)),12)*.6;});}
 
 /* 暁の丘：着いてから約2分半かけて、夜がだんだん明けていく */
-const DAWN_DUR=150;const _dc=new THREE.Color();
+const DAWN_DUR=60;const _dc=new THREE.Color();
 function stepDawn(dt){
  const P=PLACES[PLACE];if(!LAND||!P.dawnTo||H.on)return;
- LAND.dawnT=(LAND.dawnT||0)+dt;const k=sm(3,DAWN_DUR,LAND.dawnT);
+ LAND.dawnT=(LAND.dawnT||0)+dt;const k=sm(2,DAWN_DUR,LAND.dawnT);
  if(Math.abs(k-(LAND.dawnK===undefined?-1:LAND.dawnK))<.002)return;LAND.dawnK=k;
  const U=domeMesh.material.uniforms;
  U.a.value.setHex(P.sky[0]).lerp(_dc.setHex(P.dawnTo.sky[0]),k);U.b.value.setHex(P.sky[1]).lerp(_dc.setHex(P.dawnTo.sky[1]),k);U.gk.value=k*.75;
@@ -2865,7 +2912,7 @@ function applyPlace(i,quiet){
 function applyPlaceInner(i,quiet){
  const P=PLACES[i];
  domeMesh.material.uniforms.a.value.setHex(P.sky[0]);domeMesh.material.uniforms.b.value.setHex(P.sky[1]);domeMesh.material.uniforms.gk.value=0;
- HAZE.setHex(P.haze);if(hzMesh)hzMesh.material.uniforms.col.value.setHex(P.haze);
+ HAZE.setHex(P.haze);if(hzMesh){hzMesh.material.uniforms.col.value.setHex(P.haze);hzMesh.position.y=P.land==='cliff'?CLIFF_SEA+70:-40;}
  buildLand(i);
  if(soundOn)ambStart();
  try{localStorage.setItem('yume_place_v1',String(i));}catch(e){}
@@ -4088,7 +4135,7 @@ const VR_STONE=(function(){const g=new THREE.Group();
 const _ps=new THREE.Vector3();
 function plStone(){
  if(LAND&&LAND.starFrag){VR_STONE.g.visible=false;LAND.starFrag.getWorldPosition(_ps);return {pos:_ps,halo:LAND.starHalo,r:1.9};}
- if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;const z=landKind==='lake'?-12:-20;VR_STONE.g.position.set(0,landH(0,z)+1.55,z);}
+ if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;const z=landKind==='lake'?-3:landKind==='cliff'?-3:-20;VR_STONE.g.position.set(0,landH(0,z)+1.55,z);}
  VR_STONE.g.visible=true;VR_STONE.st.getWorldPosition(_ps);return {pos:_ps,halo:VR_STONE.halo,r:1.9};}
 function plStep(dt,down){
  const S=PL.sign;S.sp.visible=false;
