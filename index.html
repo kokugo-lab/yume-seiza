@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -3422,7 +3422,10 @@ function vrDrawPanel(){
  const who=w.who||[],pages=Math.max(1,Math.ceil(who.length/VRP.PER));
  P.page=Math.max(0,Math.min(pages-1,P.page));
  const rowH=VRP.ROW;
- who.slice(P.page*VRP.PER,P.page*VRP.PER+VRP.PER).forEach((o,k)=>{
+ P.trunc=[];
+ const ex=(P.exp>=0)?who[P.page*VRP.PER+P.exp]:null;if(!ex)P.exp=-1;
+ if(ex)vrDrawFull(ex,y,rowH*VRP.PER-20);
+ else who.slice(P.page*VRP.PER,P.page*VRP.PER+VRP.PER).forEach((o,k)=>{
   const top=y+k*rowH,fo={q:o.fld,name:o.name,txt:o.txt},on=isFav(fo);
   if(VR.rowGaze===k){g.fillStyle='rgba(232,200,106,.2)';rrect(g,pad-16,top-8,W-pad*2+32,rowH-24,18);g.fill();}
   g.fillStyle='#2b4a6f';g.font='600 32px '+VRF;g.fillText(o.fld==='q1'?'問一':'問二',pad,top+8);
@@ -3430,6 +3433,10 @@ function vrDrawPanel(){
   const al=wrapJ(g,'「'+o.txt+'」',W-pad*2-210),ls=al.slice(0,3);
   if(al.length>3)ls[2]=ls[2].replace(/.$/,'…');
   ls.forEach((l,m)=>g.fillText(l,pad,top+50+m*58));
+  /* 省略された文：見つめつづけると全文が開く（進みぐあいを細い線で） */
+  P.trunc[k]=al.length>3;
+  if(P.trunc[k]){g.fillStyle='#9a9384';g.font='500 28px '+VRF;g.fillText('…見つめると全文',pad+86,top+12);
+   if(P.dwk===k&&P.dwq>0){g.fillStyle='rgba(232,200,106,.95)';rrect(g,pad,top+rowH-34,(W-pad*2-210)*P.dwq,8,4);g.fill();}}
   /* ☆素敵ボタン */
   const bx=W-pad-190,by=top+44,bw=190,bh=96,id='fav'+k;
   const pr=(VR.hot===id)?VR.ht/VR_PRESS:0;
@@ -3449,7 +3456,7 @@ function vrDrawPanel(){
   if(ok&&pr>0){g.save();rrect(g,x,fy,bw,bh,52);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(x,fy,bw*pr,bh);g.restore();}
   g.fillStyle=ok?'#fff':'rgba(107,102,92,.5)';g.font='700 42px '+VRF;g.textAlign='center';g.textBaseline='middle';
   g.fillText(t,x+bw/2,fy+bh/2+2);
-  if(ok)P.hot.push({id:id,x:x-14,y:fy-14,w:bw+28,h:bh+28,act:()=>{P.page+=d;vrDrawPanel();}});});
+  if(ok)P.hot.push({id:id,x:x-14,y:fy-14,w:bw+28,h:bh+28,act:()=>{P.page+=d;P.exp=-1;vrDrawPanel();}});});
  g.fillStyle='#6b665c';g.font='600 38px '+VRF;g.textAlign='center';g.textBaseline='middle';
  g.fillText((P.page+1)+' / '+pages,W/2,fy+bh/2);
  /* 一言のお知らせ（2つ選んだあと など） */
@@ -3457,6 +3464,24 @@ function vrDrawPanel(){
   g.fillStyle='#fff';g.font='600 34px '+VRF;g.fillText(P.msg,W/2,fy-56);}
  g.textAlign='left';g.textBaseline='top';
  P.tx.needsUpdate=true;}
+/* 全文を、行の場所いっぱいに広げて出す（文字が多いときは少し小さく） */
+function vrDrawFull(o,top,h){
+ const P=VR.panel,g=P.g,W=VRP.W,pad=VRP.pad,fo={q:o.fld,name:o.name,txt:o.txt},on=isFav(fo);
+ g.fillStyle='#fffaf0';rrect(g,pad-20,top-10,W-pad*2+40,h,22);g.fill();
+ g.strokeStyle='rgba(201,163,74,.8)';g.lineWidth=3;rrect(g,pad-20,top-10,W-pad*2+40,h,22);g.stroke();
+ g.textAlign='left';g.textBaseline='top';
+ g.fillStyle='#2b4a6f';g.font='600 32px '+VRF;g.fillText((o.fld==='q1'?'問一':'問二')+'　全文',pad,top+8);
+ const tw=W-pad*2-10,room=h-60-130;let fs=48,ls;
+ for(;fs>=28;fs-=2){g.font='500 '+fs+'px '+VRF;ls=wrapJ(g,'「'+o.txt+'」',tw);if(ls.length*fs*1.3<=room)break;}
+ g.fillStyle='#26231f';ls.forEach((l,m)=>g.fillText(l,pad,top+56+m*fs*1.3));
+ g.fillStyle='#9a9384';g.font='500 28px '+VRF;g.fillText('目をはなすと元にもどる',pad,top+h-80);
+ const bx=W-pad-200,by=top+h-118,bw=200,bh=96,id='favE',pr=(VR.hot===id)?VR.ht/VR_PRESS:0;
+ g.fillStyle=on?'#e8c86a':'#fffaf0';rrect(g,bx,by,bw,bh,48);g.fill();
+ g.strokeStyle='#c9a34a';g.lineWidth=3;rrect(g,bx,by,bw,bh,48);g.stroke();
+ if(pr>0){g.save();rrect(g,bx,by,bw,bh,48);g.clip();g.fillStyle='rgba(232,200,106,.55)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
+ g.fillStyle=on?'#241c08':'#8a6a1c';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';
+ g.fillText(on?'★えらんだ':'☆素敵',bx+bw/2,by+bh/2+2);g.textAlign='left';g.textBaseline='top';
+ P.hot.push({id:id,x:bx-14,y:by-14,w:bw+28,h:bh+28,act:()=>vrFav(fo)});}
 function vrFav(o){
  const P=VR.panel;
  if(isFav(o)){FAV=FAV.filter(f=>favKey(f)!==favKey(o));}
@@ -3485,7 +3510,7 @@ function vrOpen(i){
  mesh.up.copy(_cu);mesh.lookAt(0,0,0);
  scene.add(mesh);
  const first=!VR.hinted;VR.hinted=true;
- VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],msg:first?'うなずく2回＝☆素敵　首を2往復振る＝外す':'',ok:true,msgT:first?performance.now()+5000:0};
+ VR.panel={i:i,mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,page:0,hot:[],exp:-1,dwk:-1,dwq:0,leave:0,trunc:[],msg:first?'うなずく2回＝☆素敵　首を2往復振る＝外す':'',ok:true,msgT:first?performance.now()+5000:0};
  vrDrawPanel();
  if(first){const P0=VR.panel;setTimeout(()=>{if(VR.panel===P0)vrDrawPanel();},5100);}
  try{if(typeof bell==='function'&&soundOn)bell(i);}catch(e){}
@@ -3591,6 +3616,7 @@ function headTarget(){
   /* 行の幅を、上下に3割ずつ広げて粘る（うなずいて視線が下がっても、となりの文に移らない） */
   const r=(hp.y-VRP.TOP)/VRP.ROW,who=WORDS[P.i].who||[];let k=Math.floor(r);
   if(HEAD.row>=0&&r>=HEAD.row-.3&&r<HEAD.row+1.3)k=HEAD.row;
+  if(P.exp>=0)k=(r<VRP.PER)?P.exp:-1;
   const o=who[P.page*VRP.PER+k];
   if(k>=0&&k<VRP.PER&&o)return {t:'row',k:k,fo:{q:o.fld,name:o.name,txt:o.txt}};}
  return null;}
@@ -3611,6 +3637,18 @@ function nodTwice(P,A,tol){/* 下→上→下→上（2回のうなずき）。�
 function headReset(){HEAD.s=[];HEAD.tg=[];HEAD.row=-1;}
 function headHint(t,ok){const P=VR.panel;if(!P)return;P.msg=t;P.ok=ok!==false;P.msgT=performance.now()+2600;vrDrawPanel();
  setTimeout(()=>{if(VR.panel===P)vrDrawPanel();},2700);}
+const EXP_HOLD=2.4,EXP_LEAVE=.9;
+function vrExpandStep(now,row){
+ const P=VR.panel;if(!P)return;
+ if(P.exp>=0){/* 全文を開いているあいだ：行の場所から目をはなして少したつと、元にもどる */
+  if(row>=0)P.leave=0;else if(!P.leave)P.leave=now;else if(now-P.leave>EXP_LEAVE){P.exp=-1;P.leave=0;vrDrawPanel();}
+  return;}
+ if(row>=0&&P.trunc&&P.trunc[row]&&!VR.hot){
+  if(P.dwk!==row){P.dwk=row;P.dwT=now;P.dwq=0;}
+  const k=(now-P.dwT)/EXP_HOLD,q=k<.25?0:Math.min(1,Math.round(k*20)/20);
+  if(k>=1){P.exp=row;P.dwk=-1;P.dwq=0;P.leave=0;vrDrawPanel();try{chime(-1,1046.5);}catch(e){}return;}
+  if(q!==P.dwq){P.dwq=q;vrDrawPanel();}}
+ else if(P.dwk>=0||P.dwq){P.dwk=-1;P.dwq=0;vrDrawPanel();}}
 function headStep(){
  const now=performance.now()/1000;
  camera.getWorldDirection(_vf);
@@ -3618,6 +3656,7 @@ function headStep(){
  const tg=headTarget();
  /* 見つめている行に、うっすら色をつける */
  const row=(tg&&tg.t==='row')?tg.k:-1;if(row!==HEAD.row){HEAD.row=row;VR.rowGaze=row;if(VR.panel)vrDrawPanel();}
+ vrExpandStep(now,row);
  HEAD.s.push({t:now,p:pit,y:yaw});HEAD.tg.push({t:now,g:tg});
  while(HEAD.s.length&&now-HEAD.s[0].t>HEAD.WIN)HEAD.s.shift();
  while(HEAD.tg.length&&now-HEAD.tg[0].t>HEAD.WIN)HEAD.tg.shift();
