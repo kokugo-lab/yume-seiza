@@ -415,6 +415,28 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 #vrmsg.on{display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:42;width:min(440px,86vw);
   background:rgba(246,244,238,.97);color:#26231f;border-radius:10px;padding:16px;font-size:13px;line-height:1.9;pointer-events:none}
 </style>
+<style>
+/* ───── 読みの記録（先生用）・アンケート ───── */
+#dash,#sus{position:fixed;inset:0;z-index:20;background:#05070f;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));color:#dfe6f5}
+#dash.on,#sus{display:block}
+#dash .w.wide{max-width:980px}
+#dash h3{color:#e8c86a;font-size:13.5px;letter-spacing:.14em;font-weight:500;margin:22px 0 8px}
+#dash .tb{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#dash table{border-collapse:collapse;font-size:12px;min-width:100%}
+#dash th,#dash td{border-bottom:1px solid rgba(223,230,245,.14);padding:6px 7px;text-align:left;white-space:nowrap}
+#dash th{color:#9fb0c8;font-weight:500}
+#dash tr[data-dash]{cursor:pointer}#dash tr[data-dash]:hover td{background:rgba(232,200,106,.08)}
+#dash .an{margin:0 0 10px}#dash .an p{margin:4px 0 2px;font-size:13px;line-height:1.7;color:#f2ece0}#dash .an small{color:#9fb0c8;font-size:11px}
+#dash .an .bar{display:block;height:6px;border-radius:99px;background:rgba(223,230,245,.12);overflow:hidden}
+#dash .an .bar i{display:block;height:100%;background:linear-gradient(90deg,#e8c86a,#ffb08a)}
+#dash .stu{position:fixed;inset:0;background:rgba(5,7,15,.98);overflow-y:auto;padding:16px;z-index:21}
+#sus .sq{background:rgba(246,244,238,.06);border-radius:10px;padding:10px 12px;margin:0 0 8px}
+#sus .sq p{margin:0 0 8px;font-size:13px;line-height:1.7}
+#sus .sr{display:flex;gap:6px}#sus .sr button{flex:1;border:1px solid rgba(223,230,245,.3);background:none;color:#dfe6f5;border-radius:8px;padding:8px 0;font:inherit;font-size:14px;cursor:pointer}
+#sus .sr button.on{background:#e8c86a;color:#241c08;border-color:#e8c86a;font-weight:600}
+#sus textarea{min-height:70px}
+</style>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -511,6 +533,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
   <p style="margin-top:16px;text-align:center">
     <button class="lnk" id="impdemo">見本の回答で試す（二十人分）</button>
     <button class="lnk" id="impclear">この端末の回答をすべて消す</button></p>
+  <p style="text-align:center"><button class="lnk" id="dashopen" style="color:#e8c86a">読みの記録（先生用）</button></p>
 
   <hr class="sep">
   <p class="g"><b>みんなの端末に自動で届ける</b><br>
@@ -1030,7 +1053,7 @@ function tokenize(s){
  return out;}
 function sentences(s){return (s||'').split(/[。．\n]/).map(t=>t.trim()).filter(Boolean);}
 function wordsOf(txt){const st=new Set();sentences(txt).forEach(sn=>tokenize(sn).forEach(w=>st.add(w)));return st;}
-function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ══ 回答・星座の保存 ══ */
 const LS='yume_posts_v2',LC='yume_consts_v1',LN='yume_name_v1',LF='yume_feed_v1';
@@ -1861,7 +1884,7 @@ function loop(){
   const f=flashes[i];f.t+=dt;const k=Math.min(1,f.t/1.1);
   f.sp.scale.setScalar(2+70*k);f.sp.material.opacity=1-k;
   if(k>=1){skyG.remove(f.sp);flashes.splice(i,1);}}
- stepFeatures(dt);
+ stepFeatures(dt);logTick(dt);
  if(VR.on){vrStep(dt);if(VR.on){lakeReflect();vrRender();return;}}
  lakeReflect();
  renderer.render(scene,camera);}
@@ -3959,7 +3982,7 @@ function fragStep(dt){
  fragCap(f,k);FR_CAP.sp.visible=true;camUp();
  FR_CAP.sp.position.copy(f.sp.position).normalize().multiplyScalar(34).addScaledVector(_cu,4.6);
  vrRing(0);VR.gaze=-1;VR.gt=0;
- if(k>=1)fragRemove(best);
+ if(k>=1){LOG.via='frag-hold';LOG.selMs=Math.round(FR.t*1000);fragRemove(best);}
  return true;}
 function fragRemove(i){
  const f=FR.list[i];if(!f)return;
@@ -3976,8 +3999,10 @@ function vrHitMesh(mesh,W,H){
 /* 見つめたボタンを押す（共通） */
 function vrPress(hp,hot,draw,dt){
  const b=hot.find(o=>hp.x>=o.x&&hp.x<=o.x+o.w&&hp.y>=o.y&&hp.y<=o.y+o.h);const id=b?b.id:null;
- if(id!==VR.hot){const was=VR.hot;VR.hot=id;VR.ht=0;VR.done=false;draw();if(was)vrRedrawAll();}
- if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=(b.hold||VR_PRESS)){VR.done=true;VR.ht=0;b.act();}else draw();}
+ if(id!==VR.hot){const was=VR.hot;VR.hot=id;VR.hotT=performance.now();VR.ht=0;VR.done=false;draw();if(was)vrRedrawAll();}
+ if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=(b.hold||VR_PRESS)){VR.done=true;VR.ht=0;
+   LOG.selMs=Math.round(performance.now()-VR.hotT);if(String(b.id).indexOf('fav')===0)LOG.via='dwell';logEv('press',{id:b.id,selMs:LOG.selMs});
+   b.act();}else draw();}
  VR.gaze=-1;VR.gt=0;vrRing(b&&!VR.done?VR.ht/(b.hold||VR_PRESS):0);}
 function vrRedrawAll(){if(VR.panel)vrDrawPanel();if(PL.panel)plDraw();}
 /* ── 頭のジェスチャー（ためし）：うなずく＝☆素敵をつける／首を横に振る＝素敵を外す ──
@@ -4008,7 +4033,7 @@ function nodTwice(P,A,tol){/* 下→上→下→上（2回のうなずき）。�
   if(d===0){if(v>e){e=v;ti=i;}else if(e-v>=A){d=-1;start=e;e=v;n=1;}}
   else if(d===-1){if(v<e)e=v;else if(v-e>=A){d=1;e=v;n++;}}
   else{if(v>e)e=v;else if(e-v>=A){d=-1;e=v;n++;}}}
- return (n>=4&&Math.abs(P[P.length-1]-start)<=tol)?ti:-1;}
+ HEAD.lastN=n;return (n>=4&&Math.abs(P[P.length-1]-start)<=tol)?ti:-1;}
 function headReset(){HEAD.s=[];HEAD.tg=[];HEAD.row=-1;}
 function headHint(t,ok){const P=VR.panel;if(!P)return;P.msg=t;P.ok=ok!==false;P.msgT=performance.now()+2600;vrDrawPanel();
  setTimeout(()=>{if(VR.panel===P)vrDrawPanel();},2700);}
@@ -4021,7 +4046,8 @@ function vrExpandStep(now,row){
  if(row>=0&&P.trunc&&P.trunc[row]&&!VR.hot){
   if(P.dwk!==row){P.dwk=row;P.dwT=now;P.dwq=0;}
   const k=(now-P.dwT)/EXP_HOLD,q=k<.25?0:Math.min(1,Math.round(k*20)/20);
-  if(k>=1){P.exp=row;P.dwk=-1;P.dwq=0;P.leave=0;vrDrawPanel();try{chime(-1,1046.5);}catch(e){}return;}
+  if(k>=1){P.exp=row;P.dwk=-1;P.dwq=0;P.leave=0;vrDrawPanel();
+   {const o=(WORDS[P.i].who||[])[P.page*VRP.PER+row];if(o)logEv('expand',{w:WORDS[P.i].w,fld:o.fld,name:o.name,txt:o.txt});}try{chime(-1,1046.5);}catch(e){}return;}
   if(q!==P.dwq){P.dwq=q;vrDrawPanel();}}
  else if(P.dwk>=0||P.dwq){P.dwk=-1;P.dwq=0;vrDrawPanel();}}
 function headStep(){
@@ -4030,7 +4056,8 @@ function headStep(){
  const pit=Math.asin(Math.max(-1,Math.min(1,_vf.y))),yaw=Math.atan2(_vf.x,_vf.z);
  const tg=headTarget();
  /* 見つめている行に、うっすら色をつける */
- const row=(tg&&tg.t==='row')?tg.k:-1;if(row!==HEAD.row){HEAD.row=row;VR.rowGaze=row;if(VR.panel)vrDrawPanel();}
+ const row=(tg&&tg.t==='row')?tg.k:-1;if(row!==HEAD.row){HEAD.row=row;VR.rowGaze=row;if(VR.panel)vrDrawPanel();
+  logRow(row>=0?row:null,row>=0?tg.fo:null,VR.panel&&WORDS[VR.panel.i]?WORDS[VR.panel.i].w:null);HEAD.rowT=now;}
  vrExpandStep(now,row);
  HEAD.s.push({t:now,p:pit,y:yaw});HEAD.tg.push({t:now,g:tg});
  while(HEAD.s.length&&now-HEAD.s[0].t>HEAD.WIN)HEAD.s.shift();
@@ -4041,20 +4068,30 @@ function headStep(){
  let kind=null,ti=-1;
  if(rng(Y)<=HEAD.OTHER&&(ti=nodTwice(P,HEAD.A_NOD,HEAD.TOL))>=0)kind='nod';
  else if(rng(P)<=HEAD.OTHER&&swings(Y,HEAD.A_SWING)>=HEAD.SWINGS)kind='shake';
- if(!kind)return;
+ if(!kind){
+  /* 途中までのジェスチャー（うなずき1回、首ふり1往復など）：対象を見ていたときだけ「未完了」として記録 */
+  const nN=HEAD.lastN||0,nS=swings(Y,HEAD.A_SWING),hasT=HEAD.tg.some(o=>o.g);
+  const k2=(nN>=2&&nN<4)?'nod':(nS>=2&&nS<4)?'shake':null;
+  if(k2&&hasT){const n2=k2==='nod'?nN:nS;if(!HEAD.pend||HEAD.pend.kind!==k2)HEAD.pend={kind:k2,t:now,n:n2};else HEAD.pend.n=Math.max(HEAD.pend.n,n2);}
+  else if(HEAD.pend&&now-HEAD.pend.t>HEAD.WIN){logEv('gesture_partial',{kind:HEAD.pend.kind,n:HEAD.pend.n});HEAD.pend=null;}
+  return;}
+ HEAD.pend=null;
  let g=null;
  if(kind==='nod'){
   const t0=HEAD.s[ti].t;let bd=9;HEAD.tg.forEach(o=>{if(o.g&&Math.abs(o.t-t0)<bd&&o.t<=t0+.15){bd=Math.abs(o.t-t0);g=o.g;}});
   if(!g){const st=HEAD.tg.find(o=>o.g);g=st&&st.g;}}
  else{const cnt={};let bestN=0;HEAD.tg.forEach(o=>{if(!o.g)return;const key=o.g.t+(o.g.k||'');cnt[key]=(cnt[key]||0)+1;if(cnt[key]>bestN){bestN=cnt[key];g=o.g;}});}
  HEAD.cool=now+HEAD.COOL;headReset();
- if(!g)return;
+ const sel=Math.round((now-(HEAD.rowT||now))*1000);
+ if(!g){logEv('gesture',{kind:kind,target:'none',result:'no_target'});return;}
+ let res='no_target';
  if(kind==='nod'&&g.t==='row'){
-  if(isFav(g.fo))headHint('すでに選んでいます（首を振ると外れます）',true);
-  else{const before=FAV.length;vrFav(g.fo);if(FAV.length>before)headHint('うなずき2回：☆素敵をつけました',true);}}
+  if(isFav(g.fo)){headHint('すでに選んでいます（首を振ると外れます）',true);res='already';}
+  else{const before=FAV.length;LOG.via='nod';LOG.selMs=sel;vrFav(g.fo);if(FAV.length>before){headHint('うなずき2回：☆素敵をつけました',true);res='applied';}else res='blocked';}}
  else if(kind==='shake'&&g.t==='row'){
-  if(isFav(g.fo)){vrFav(g.fo);headHint('首ふり（2往復）：素敵を外しました',true);}}
- else if(kind==='shake'&&g.t==='frag'){const i=FR.list.findIndex(f=>f.k===g.k);if(i>=0)fragRemove(i);}}
+  if(isFav(g.fo)){LOG.via='shake';LOG.selMs=sel;vrFav(g.fo);headHint('首ふり（2往復）：素敵を外しました',true);res='applied';}}
+ else if(kind==='shake'&&g.t==='frag'){const i=FR.list.findIndex(f=>f.k===g.k);if(i>=0){LOG.via='frag-shake';LOG.selMs=null;fragRemove(i);res='applied';}}
+ logEv('gesture',{kind:kind,target:g.t,result:res});}
 /* ── 場所の星：真下の「VRをおわる」のそばの小さな星を見つめると、場所をえらぶ札が開く ── */
 const PL={yaw:null,t:0,gaze:false,panel:null,hot:[],msg:'',msgT:0,lab:null,labT:0};
 /* 真下の「VRをおわる」のそば（約53°下）。ふだんの視界には入らない */
@@ -4229,6 +4266,248 @@ $('vrcover').addEventListener('touchend',e=>{e.preventDefault();e.stopPropagatio
 addEventListener('resize',vrCheckRot);
 document.addEventListener('fullscreenchange',()=>setTimeout(resize,200));
 
+
+/* ══ 読みの記録（研究用） ══
+   生徒ごと（クラス・出席番号）に、操作と読みの過程を記録する。
+   ・端末の中にためる（先生用の「読みの記録」でこの端末の分を見られる）
+   ・記録先URL（Google Apps Script）があれば、数秒おきにまとめて送る（クラス全体を集計できる）
+   記録するもの：入退室、VRの出入り、視線・頭の向きの推移、星を開いた／閉じた時間、回答ごとの注視時間、
+   全文表示、素敵の選択と解除（どの方法で、選ぶまで何秒か）、ジェスチャー（成功・未完了）、ボタン、場所、
+   問一／問二、表示の切りかえ、道具、ミッション、タップ、音読、百年の物語、流れ星、星座づくり、投稿、アンケート。 */
+const LOGK={all:'yume_log_v1',q:'yume_logq_v1',url:'yume_logurl_v1',dev:'yume_dev_v1'};
+const LOG={sid:Math.random().toString(36).slice(2,10),dev:'',url:'',seq:0,via:'',selMs:null,
+ trace:[],tAcc:0,tLast:0,fr:0,starW:null,starT:0,rowKey:null,rowT:0,rowFo:null,rowW:null,vrT:0,susDone:false,sending:false};
+try{LOG.dev=localStorage.getItem(LOGK.dev)||'';if(!LOG.dev){LOG.dev=Math.random().toString(36).slice(2,8);localStorage.setItem(LOGK.dev,LOG.dev);}}catch(e){LOG.dev='nostore';}
+(function(){const u=new URLSearchParams(location.search).get('log');
+ try{if(u){localStorage.setItem(LOGK.url,u);}LOG.url=u||localStorage.getItem(LOGK.url)||'';}catch(e){LOG.url=u||'';}})();
+function logWho(){let id='',cls='',no='',nick='';
+ try{id=myId();cls=myCls();no=myNo();nick=myLabel()||'';}catch(e){}
+ return {pid:id||('anon:'+LOG.dev),cls:cls,no:no,nick:nick};}
+function lj(k,d){try{return JSON.parse(localStorage.getItem(k)||'null')||d;}catch(e){return d;}}
+function ls(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function logEv(type,data){
+ if(DEMO_ON&&!LOG.url&&!/[?&]logdemo/.test(location.search)){/* デモは端末にだけ残す */}
+ const w=logWho();
+ const ev={ts:new Date().toISOString(),sid:LOG.sid,seq:++LOG.seq,pid:w.pid,cls:w.cls,no:w.no,nick:w.nick,
+  mode:(typeof VR!=='undefined'&&VR.on)?'vr':'2d',place:PLACE,q:QMODE,type:type,d:data||{}};
+ const all=lj(LOGK.all,[]);all.push(ev);if(all.length>6000)all.splice(0,all.length-6000);ls(LOGK.all,all);
+ if(LOG.url){const q=lj(LOGK.q,[]);q.push(ev);if(q.length>3000)q.splice(0,q.length-3000);ls(LOGK.q,q);}
+ return ev;}
+/* 送る：テキストとして POST（Apps Script 側で JSON として読む） */
+function logFlush(beacon){
+ if(!LOG.url||LOG.sending)return;const q=lj(LOGK.q,[]);if(!q.length)return;
+ const batch=q.slice(0,200),body=JSON.stringify({events:batch});
+ if(beacon&&navigator.sendBeacon){if(navigator.sendBeacon(LOG.url,new Blob([body],{type:'text/plain'})))ls(LOGK.q,q.slice(batch.length));return;}
+ LOG.sending=true;
+ fetch(LOG.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body})
+  .then(()=>{const q2=lj(LOGK.q,[]);ls(LOGK.q,q2.slice(batch.length));})
+  .catch(()=>{}).finally(()=>{LOG.sending=false;});}
+setInterval(()=>logFlush(false),8000);
+addEventListener('pagehide',()=>{logTraceFlush();logFlush(true);});
+document.addEventListener('visibilitychange',()=>{logEv(document.hidden?'hidden':'visible',{});if(document.hidden){logTraceFlush();logFlush(true);}});
+
+/* 視線・頭の向きの推移：1秒に4回、向き（度）と見ていたもの。15秒ごとにまとめて1件にする */
+const _ld=new THREE.Vector3();
+function logGazeTarget(){
+ if(typeof VR!=='undefined'&&VR.on){
+  if(PL.panel&&PL.gaze)return 'place';
+  if(VR.rowGaze>=0&&VR.panel)return 'row'+VR.rowGaze;
+  if(VR.panel&&VR.hot)return 'btn:'+VR.hot;
+  if(FR.gaze>=0)return 'frag';
+  if(PL.gaze)return 'stone';
+  if(VR.gaze>=0&&WORDS[VR.gaze])return 'star:'+WORDS[VR.gaze].w;
+  if(VR.panel)return 'card';}
+ return '';}
+function logTick(dt){
+ if(!inSky)return;
+ LOG.fr++;LOG.tAcc+=dt;
+ if(LOG.tAcc<.25)return;
+ camera.getWorldDirection(_ld);
+ const yaw=Math.round(Math.atan2(_ld.x,-_ld.z)*180/Math.PI),pit=Math.round(Math.asin(Math.max(-1,Math.min(1,_ld.y)))*180/Math.PI);
+ LOG.trace.push([Math.round(performance.now()),yaw,pit,logGazeTarget(),Math.round(LOG.fr/LOG.tAcc)]);
+ LOG.tAcc=0;LOG.fr=0;
+ if(LOG.trace.length>=60)logTraceFlush();}
+function logTraceFlush(){if(!LOG.trace.length)return;const tr=LOG.trace;LOG.trace=[];
+ logEv('trace',{t0:tr[0][0],s:tr.map(r=>[r[0]-tr[0][0],r[1],r[2],r[3],r[4]])});}
+
+/* 回答ごとの注視（VR）：行から目が移ったとき、0.25秒以上なら記録 */
+function logRow(k,fo,w){
+ const now=performance.now();
+ if(LOG.rowKey!==null&&LOG.rowFo){const ms=Math.round(now-LOG.rowT);
+  if(ms>=250)logEv('dwell',{w:LOG.rowW,fld:LOG.rowFo.q,name:LOG.rowFo.name,txt:LOG.rowFo.txt,ms:ms});}
+ LOG.rowKey=k;LOG.rowFo=fo||null;LOG.rowW=w||null;LOG.rowT=now;}
+
+/* ── 既存の関数に、記録を差しこむ ── */
+function logWrap(name,before,after){
+ const f=window[name];if(typeof f!=='function')return;
+ window[name]=function(){let r0;try{r0=before&&before.apply(this,arguments);}catch(e){}
+  const r=f.apply(this,arguments);try{after&&after.apply(this,[r].concat([].slice.call(arguments)));}catch(e){}return r;};}
+
+/* 入退室・画面 */
+logEv('open',{ua:navigator.userAgent,w:innerWidth,h:innerHeight,dpr:devicePixelRatio,
+ cls:(typeof CLS!=='undefined'?CLS:''),demo:!!DEMO_ON,feed:!!(typeof feedOn!=='undefined'&&feedOn),
+ gyroApi:!!window.DeviceOrientationEvent,url:location.search.replace(/feed=[^&]*/,'feed=…').replace(/log=[^&]*/,'log=…')});
+$('goSky').addEventListener('click',()=>logEv('enter_sky',{}));
+$('back').addEventListener('click',()=>{logStarClose();logEv('to_title',{});});
+logWrap('askName',null,()=>logEv('name_box',{}));
+$('nameok').addEventListener('click',()=>setTimeout(()=>logEv('register',{}),0));
+$('send').addEventListener('click',()=>logEv('post',{q1len:[...($('p1').value||'')].length,q2len:[...($('p2').value||'')].length}));
+/* 星を開いた・閉じた（ふつうの画面） */
+function logStarClose(){if(LOG.starW!==null){logEv('star_close',{w:LOG.starW,ms:Math.round(performance.now()-LOG.starT)});LOG.starW=null;}}
+logWrap('showStar',(i)=>{logStarClose();const w=WORDS[i];if(!w)return;LOG.starW=w.w;LOG.starT=performance.now();
+ logEv('star_open',{w:w.w,n:w.n,via:LOG.via||'tap',fromSearch:!!FROM_SEARCH});LOG.via='';});
+logWrap('closeInfo',()=>{if(!(typeof VR!=='undefined'&&VR.on))logStarClose();});
+logWrap('showEdge',(e)=>{if(e&&WORDS[e.a]&&WORDS[e.b])logEv('edge_open',{a:WORDS[e.a].w,b:WORDS[e.b].w,n:e.n});});
+logWrap('goStar',(i)=>{LOG.via=LOG.via||'jump';});
+/* 素敵（ふつうの画面） */
+logWrap('toggleFav',(k)=>{const o=LISTF[k];if(!o)return;LOG._fav=[o,isFav(o)];},()=>{const x=LOG._fav;if(!x)return;LOG._fav=null;
+ const now=isFav(x[0]);if(now!==x[1])logEv('fav',{op:now?'add':'remove',fld:x[0].q,name:x[0].name,txt:x[0].txt,method:'tap'});
+ else logEv('fav_blocked',{fld:x[0].q,method:'tap'});});
+/* 素敵（VR）：どの方法で、選ぶまで何秒か */
+logWrap('vrFav',(o)=>{LOG._vf=[o,isFav(o)];},()=>{const x=LOG._vf;if(!x)return;LOG._vf=null;const now=isFav(x[0]);
+ const d={fld:x[0].q,name:x[0].name,txt:x[0].txt,method:LOG.via||'dwell',selMs:LOG.selMs};
+ if(now!==x[1])logEv('fav',Object.assign({op:now?'add':'remove'},d));else logEv('fav_blocked',d);LOG.via='';LOG.selMs=null;});
+logWrap('fragRemove',(i)=>{const f=FR.list[i];if(f)logEv('fav',{op:'remove',fld:f.o.q,name:f.o.name,txt:f.o.txt,method:LOG.via||'frag-hold',selMs:LOG.selMs});LOG.via='';LOG.selMs=null;});
+/* VRの星の札 */
+logWrap('vrOpen',null,(r,i)=>{const w=WORDS[i];if(w){LOG.vrStar=w.w;LOG.vrStarT=performance.now();logEv('star_open',{w:w.w,n:w.n,via:'gaze'});}});
+logWrap('vrClosePanel',()=>{logRow(null,null,null);if(LOG.vrStar){logEv('star_close',{w:LOG.vrStar,ms:Math.round(performance.now()-LOG.vrStarT)});LOG.vrStar=null;}});
+/* VRの出入り */
+logWrap('vrEnter',null,()=>{if(VR.on){LOG.vrT=performance.now();logEv('vr_enter',{w:innerWidth,h:innerHeight});}});
+logWrap('vrExitMode',()=>{if(VR.on){logRow(null,null,null);logEv('vr_exit',{ms:Math.round(performance.now()-LOG.vrT)});LOG._askSus=true;}},
+ ()=>{if(LOG._askSus){LOG._askSus=false;if(!LOG.susDone)setTimeout(susOpen,900);}});
+/* 場所・問・表示・道具・ミッションなど */
+logWrap('applyPlace',(i)=>{if(i!==PLACE||!LAND)logEv('place',{from:PLACE,to:i,name:PLACES[i]&&PLACES[i].n,via:LOG.pvia||'auto'});LOG.pvia='';});
+logWrap('plGo',()=>{LOG.pvia='vr-panel';});
+$('shB').addEventListener('click',e=>{if(e.target.closest('[data-pl]'))LOG.pvia='sheet';},true);
+logWrap('setQMode',(q)=>{if(q!==QMODE)logEv('qmode',{to:q});});
+logWrap('applyFilter',(f)=>{if(inSky)logEv('filter',{f:f});});
+logWrap('setTool',(t)=>{if(inSky)logEv('tool',{t:t||'none'});});
+logWrap('openSheet',(t)=>{logEv('sheet',{t:t});});
+logWrap('missionEvent',(ev)=>{if(ev&&ev.k!=='star'&&ev.k!=='fav')logEv('mission',{k:ev.k,i:ev.i});});
+logWrap('readAloud',()=>logEv('read_aloud',{w:SELW}));
+logWrap('startHundred',()=>logEv('hundred',{op:'start'}));
+logWrap('stopHundred',()=>logEv('hundred',{op:'stop'}));
+logWrap('catchShoot',()=>logEv('shooting_star',{}));
+logWrap('startTour',(a)=>logEv('tour',{auto:!!a}));
+logWrap('onTap',(x,y)=>{LOG.via='tap';logEv('tap',{x:+(x/innerWidth).toFixed(3),y:+(y/innerHeight).toFixed(3)});});
+$('dsave').addEventListener('click',()=>logEv('const_save_open',{n:(typeof DRAW!=='undefined'?DRAW.length:0)}));
+$('namerok').addEventListener('click',()=>logEv('const_named',{name:$('namerin').value||''}));
+
+/* ── 使いやすさのアンケート（SUS 日本語版・10問）：VRを出たあと一度だけ ── */
+const SUS_Q=['このシステムをしばしば使いたいと思う','このシステムは不必要なほど複雑だと感じた','このシステムは容易に使いこなすことができると思った',
+ 'このシステムを使うのに技術の専門家のサポートを必要とするかもしれない','このシステムにあるさまざまな機能はよくまとまっていると感じた',
+ 'このシステムでは、一貫性のないところが多くあったと感じた','たいていのユーザーは、このシステムの使用方法について、とても素早く学べるだろう',
+ 'このシステムはとても扱いにくいと感じた','このシステムを使うのに自信があると感じた','このシステムを使い始める前に多くのことを学ぶ必要があった'];
+function susOpen(){
+ if($('sus'))return;
+ const d=document.createElement('div');d.id='sus';
+ d.innerHTML='<div class="w"><h2 class="p">VRの使いやすさ（1分）</h2><p class="sub">あてはまるところを選んでください。<br>1＝まったくそう思わない　5＝とてもそう思う</p>'+
+  SUS_Q.map((q,i)=>'<div class="sq"><p>'+(i+1)+'．'+q+'</p><div class="sr">'+[1,2,3,4,5].map(v=>'<button data-q="'+i+'" data-v="'+v+'">'+v+'</button>').join('')+'</div></div>').join('')+
+  '<p class="sub" style="margin-top:14px">ひとこと（使いにくかったところ・よかったところ）</p><textarea id="susc" maxlength="300"></textarea>'+
+  '<button class="prim" id="susok">送る</button><div class="row"><button id="susno">こたえない</button></div></div>';
+ document.body.appendChild(d);const A=new Array(10).fill(0);
+ d.addEventListener('click',e=>{const b=e.target.closest('[data-q]');
+  if(b){const i=+b.dataset.q;A[i]=+b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));return;}
+  if(e.target.id==='susok'){if(A.some(v=>!v)){e.target.textContent='すべて選んでから送ってください';return;}
+   const sc=(A.reduce((s,v,i)=>s+(i%2===0?v-1:5-v),0))*2.5;
+   logEv('sus',{a:A,score:sc,comment:$('susc').value||''});LOG.susDone=true;d.remove();showNote('ありがとうございました。');}
+  if(e.target.id==='susno'){logEv('sus_skip',{});LOG.susDone=true;d.remove();}});}
+
+/* ══ 先生用：読みの記録（集計） ══ */
+function logLocal(){return lj(LOGK.all,[]);}
+function logFetchAll(){
+ if(!LOG.url)return Promise.reject(new Error('記録先URLがありません'));
+ let key='';try{key=localStorage.getItem('yume_logkey_v1')||'';}catch(e){}
+ return fetch(LOG.url+(LOG.url.indexOf('?')<0?'?':'&')+'all=1&key='+encodeURIComponent(key)).then(r=>r.json()).then(j=>{if(j.error)throw new Error(j.error);return j;}).then(j=>(j.events||[]).map(e=>{if(typeof e.d==='string'){try{e.d=JSON.parse(e.d);}catch(x){e.d={};}}return e;}));}
+const med=a=>{if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2;};
+const sec=ms=>ms==null?'—':(ms/1000).toFixed(1)+'秒';
+function logAnalyze(evs){
+ const S={},W={},A={},M={},G={};
+ const st=p=>S[p]||(S[p]={pid:p,cls:'',no:'',nick:'',sess:new Set(),t0:null,t1:null,vrMs:0,vrN:0,starOpen:0,starMs:0,dwellMs:0,dwellN:0,
+  favAdd:0,favRemove:0,undo10:0,gestOk:0,gestPart:0,expand:0,places:new Set(),taps:0,sus:null,words:{}});
+ const lastAdd={};
+ evs.slice().sort((a,b)=>a.ts<b.ts?-1:1).forEach(e=>{
+  const s=st(e.pid),d=e.d||{},t=Date.parse(e.ts);
+  if(e.cls)s.cls=e.cls;if(e.no)s.no=e.no;if(e.nick)s.nick=e.nick;s.sess.add(e.sid);
+  if(s.t0===null||t<s.t0)s.t0=t;if(s.t1===null||t>s.t1)s.t1=t;
+  if(e.type==='vr_exit'){s.vrMs+=d.ms||0;s.vrN++;}
+  if(e.type==='star_open'){s.starOpen++;(W[d.w]||(W[d.w]={w:d.w,open:0,ms:0,dwell:0,who:new Set()})).open++;W[d.w].who.add(e.pid);s.words[d.w]=(s.words[d.w]||0)+1;}
+  if(e.type==='star_close'){s.starMs+=d.ms||0;if(W[d.w])W[d.w].ms+=d.ms||0;}
+  if(e.type==='dwell'){s.dwellMs+=d.ms;s.dwellN++;const k=d.fld+'|'+d.name+'|'+d.txt;
+   const a=A[k]||(A[k]={fld:d.fld,name:d.name,txt:d.txt,ms:0,n:0,who:new Set(),fav:0});a.ms+=d.ms;a.n++;a.who.add(e.pid);if(W[d.w])W[d.w].dwell+=d.ms;}
+  if(e.type==='fav'){const k=e.pid+'|'+d.fld+'|'+d.name+'|'+d.txt,m=d.method||'?',mm=M[m]||(M[m]={m:m,add:0,remove:0,sel:[],undo:0});
+   if(d.op==='add'){s.favAdd++;mm.add++;if(d.selMs!=null)mm.sel.push(d.selMs);lastAdd[k]={t:t,m:m};
+    const ak=d.fld+'|'+d.name+'|'+d.txt;(A[ak]||(A[ak]={fld:d.fld,name:d.name,txt:d.txt,ms:0,n:0,who:new Set(),fav:0})).fav++;}
+   else{s.favRemove++;mm.remove++;const la=lastAdd[k];if(la&&t-la.t<=10000){s.undo10++;(M[la.m]||mm).undo++;}}}
+  if(e.type==='gesture'){const g=G[d.kind]||(G[d.kind]={ok:0,none:0,part:0,already:0});if(d.result==='applied'){g.ok++;s.gestOk++;}else if(d.result==='already')g.already++;else g.none++;}
+  if(e.type==='gesture_partial'){(G[d.kind]||(G[d.kind]={ok:0,none:0,part:0,already:0})).part++;s.gestPart++;}
+  if(e.type==='expand')s.expand++;
+  if(e.type==='place')s.places.add(d.name);
+  if(e.type==='tap')s.taps++;
+  if(e.type==='sus')s.sus=d.score;});
+ return {S:Object.values(S),W:Object.values(W),A:Object.values(A),M:Object.values(M),G:G,n:evs.length};}
+function dashOpen(src){
+ let el=$('dash');if(!el){el=document.createElement('div');el.id='dash';document.body.appendChild(el);
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-dash]');if(!b)return;const a=b.dataset.dash;
+   if(a==='close')el.classList.remove('on');
+   if(a==='local')dashOpen('local');if(a==='class')dashOpen('class');
+   if(a==='csv')dashCSV(false);if(a==='csvs')dashCSV(true);
+   if(a==='heat')dashHeat();if(a==='seturl'){const u=($('dashurl').value||'').trim();LOG.url=u;try{localStorage.setItem(LOGK.url,u);localStorage.setItem('yume_logkey_v1',($('dashkey').value||'').trim());}catch(x){}dashOpen('class');}
+   if(a==='clear'){if(confirmClear()){ls(LOGK.all,[]);dashOpen('local');}}
+   if(a==='stu'){dashStudent(b.dataset.p);}});}
+ el.classList.add('on');el.innerHTML='<div class="w"><p class="cnt">読みこみ中…</p></div>';
+ const go=evs=>{LOG.dashEv=evs;LOG.dashSrc=src;dashRender(el,evs,src);};
+ if(src==='class')logFetchAll().then(go).catch(err=>{el.innerHTML='<div class="w"><h2 class="p">読みの記録</h2><p class="sub">クラス全体の記録を読めませんでした（'+esc(err.message)+'）。</p>'+dashUrlBox()+'<div class="row"><button data-dash="local">この端末の記録を見る</button><button data-dash="close">閉じる</button></div></div>';});
+ else go(logLocal());}
+function dashUrlBox(){return '<label>記録先URL（Google Apps Script のウェブアプリ）<em>生徒に配るリンクの末尾に &amp;log=このURL を付けると、生徒の端末から自動で送られます。</em></label>'+
+ '<input id="dashurl" value="'+esc(LOG.url)+'" placeholder="https://script.google.com/macros/s/……/exec">'+
+ '<label>合言葉（集計を読むときだけ。Apps Script の KEY と同じもの）</label><input id="dashkey" value="'+esc((()=>{try{return localStorage.getItem('yume_logkey_v1')||'';}catch(e){return '';}})())+'"><div class="row" style="margin-top:8px"><button data-dash="seturl" class="y">このURLで集計する</button></div>';}
+function dashRender(el,evs,src){
+ const R=logAnalyze(evs);LOG.dashR=R;
+ const stu=R.S.filter(s=>s.pid).sort((a,b)=>(a.cls+a.no.padStart(3,'0')).localeCompare(b.cls+b.no.padStart(3,'0')));
+ const words=R.W.sort((a,b)=>(b.dwell+b.ms)-(a.dwell+a.ms)).slice(0,15);
+ const ans=R.A.sort((a,b)=>b.ms-a.ms).slice(0,12);
+ const mx=Math.max(1,...words.map(w=>w.dwell+w.ms)),ma=Math.max(1,...ans.map(a=>a.ms));
+ const NAME={dwell:'見つめて押す','dwell:fav0':'見つめて押す','nod':'うなずき2回','shake':'首ふり2往復','frag-hold':'かけらを見つめる','frag-shake':'かけらで首ふり','tap':'タップ（ふつうの画面）'};
+ el.innerHTML='<div class="w wide"><h2 class="p">読みの記録</h2>'+
+  '<p class="sub">'+(src==='class'?'クラス全体（記録先から）':'この端末')+'　'+R.n+'件　生徒 '+stu.length+'人</p>'+
+  '<div class="row"><button data-dash="local"'+(src==='local'?' class="y"':'')+'>この端末</button><button data-dash="class"'+(src==='class'?' class="y"':'')+'>クラス全体</button><button data-dash="heat">星空に重ねる</button></div>'+
+  '<h3>生徒ごと</h3><div class="tb"><table><tr><th>組</th><th>番号</th><th>名前</th><th>滞在</th><th>VR</th><th>開いた星</th><th>星を見た時間</th><th>回答の注視</th><th>素敵＋/−</th><th>10秒内の取り消し</th><th>ジェスチャー成功/未完了</th><th>全文</th><th>場所</th><th>SUS</th></tr>'+
+  stu.map(s=>'<tr data-dash="stu" data-p="'+esc(s.pid)+'"><td>'+esc(s.cls)+'</td><td>'+esc(s.no)+'</td><td>'+esc(s.nick)+'</td><td>'+Math.round((s.t1-s.t0)/60000)+'分</td><td>'+sec(s.vrMs)+'</td><td>'+s.starOpen+
+   '</td><td>'+sec(s.starMs)+'</td><td>'+sec(s.dwellMs)+'</td><td>'+s.favAdd+'/'+s.favRemove+'</td><td>'+s.undo10+'</td><td>'+s.gestOk+'/'+s.gestPart+'</td><td>'+s.expand+'</td><td>'+s.places.size+'</td><td>'+(s.sus==null?'—':s.sus)+'</td></tr>').join('')+'</table></div>'+
+  '<h3>よく見られた言葉（星を開いた時間＋回答の注視）</h3>'+words.map(w=>'<div class="rr"><span class="rw">'+esc(w.w)+'</span><span class="bar"><i style="width:'+((w.dwell+w.ms)/mx*100)+'%"></i></span><small>'+sec(w.dwell+w.ms)+'・'+w.who.size+'人</small></div>').join('')+
+  '<h3>よく見つめられた回答</h3>'+ans.map(a=>'<div class="an"><span class="bar"><i class="t" style="width:'+(a.ms/ma*100)+'%"></i></span><p>'+esc(a.txt)+'</p><small>'+(a.fld==='q1'?'問一':'問二')+'・'+esc(nickOf(a)||'')+'　'+sec(a.ms)+'・'+a.who.size+'人が見た・素敵 '+a.fav+'</small></div>').join('')+
+  '<h3>操作の方法ごと（設計の比較）</h3><div class="tb"><table><tr><th>方法</th><th>選んだ</th><th>外した</th><th>選ぶまで（中央値）</th><th>10秒内の取り消し</th></tr>'+
+  R.M.map(m=>'<tr><td>'+esc(NAME[m.m]||m.m)+'</td><td>'+m.add+'</td><td>'+m.remove+'</td><td>'+sec(med(m.sel))+'</td><td>'+m.undo+(m.add?'（'+Math.round(m.undo/m.add*100)+'%）':'')+'</td></tr>').join('')+'</table></div>'+
+  '<p class="sub">ジェスチャー：'+Object.keys(R.G).map(k=>(k==='nod'?'うなずき':'首ふり')+' 成功 '+R.G[k].ok+'・対象なし '+R.G[k].none+'・未完了 '+R.G[k].part).join('　')+'</p>'+
+  '<h3>書き出し</h3><div class="row"><button data-dash="csvs">生徒ごとの集計（CSV）</button><button data-dash="csv">すべての記録（CSV）</button></div>'+
+  dashUrlBox()+'<div class="row" style="margin-top:14px"><button data-dash="close">閉じる</button></div></div>';}
+function dashStudent(pid){
+ const evs=(LOG.dashEv||[]).filter(e=>e.pid===pid&&e.type!=='trace').sort((a,b)=>a.ts<b.ts?-1:1);
+ const lab={star_open:'星を開く',star_close:'星を閉じる',dwell:'回答を注視',fav:'素敵',gesture:'ジェスチャー',gesture_partial:'ジェスチャー未完了',expand:'全文',place:'場所',vr_enter:'VRへ',vr_exit:'VRを出る',qmode:'問の切りかえ',tap:'タップ',sus:'アンケート',sus_skip:'アンケートなし',enter_sky:'夜空へ',to_title:'表紙へ',press:'ボタン',mission:'ミッション',open:'アプリを開く',tool:'道具',filter:'表示の切りかえ',sheet:'板を開く',edge_open:'線を開く',fav_blocked:'素敵（上限）',hidden:'画面を離れる',visible:'画面にもどる',register:'名前の登録',post:'投稿',read_aloud:'音読',hundred:'百年の物語',shooting_star:'流れ星',tour:'星めぐり',name_box:'名前の箱',const_save_open:'星座を残す',const_named:'星座に名前'};
+ const d=document.createElement('div');d.className='stu';
+ d.innerHTML='<div class="w wide"><h2 class="p">'+esc(pid)+' の記録（'+evs.length+'件）</h2><div class="tb"><table><tr><th>時刻</th><th>画面</th><th>できごと</th><th>くわしく</th></tr>'+
+  evs.map(e=>{const x=e.d||{};const det=e.type==='open'?'':x.w?esc(x.w):x.txt?esc((x.op?x.op+'・':'')+(x.method?x.method+'・':'')+x.txt.slice(0,40)):x.name?esc(x.name):x.ms?sec(x.ms):x.kind?esc(x.kind+'・'+(x.result||x.n||'')):x.id?esc(x.id):'';
+   return '<tr><td>'+new Date(e.ts).toLocaleTimeString('ja-JP')+'</td><td>'+e.mode+'</td><td>'+esc(lab[e.type]||e.type)+'</td><td>'+det+(x.ms&&x.w?'・'+sec(x.ms):'')+'</td></tr>';}).join('')+
+  '</table></div><div class="row"><button class="bk">もどる</button></div></div>';
+ d.querySelector('.bk').onclick=()=>d.remove();$('dash').appendChild(d);}
+function dashCSV(sum){
+ const R=LOG.dashR,evs=LOG.dashEv||[];let rows;
+ if(sum)rows=[['組','番号','名前','ID','セッション数','滞在分','VR秒','VR回数','開いた星','星を見た秒','回答注視秒','注視件数','素敵追加','素敵解除','10秒内取消','ジェスチャー成功','ジェスチャー未完了','全文','場所の数','タップ','SUS']]
+  .concat(R.S.map(s=>[s.cls,s.no,s.nick,s.pid,s.sess.size,Math.round((s.t1-s.t0)/60000),Math.round(s.vrMs/1000),s.vrN,s.starOpen,Math.round(s.starMs/1000),Math.round(s.dwellMs/1000),s.dwellN,s.favAdd,s.favRemove,s.undo10,s.gestOk,s.gestPart,s.expand,s.places.size,s.taps,s.sus==null?'':s.sus]));
+ else rows=[['時刻','セッション','順','ID','組','番号','名前','画面','場所','問','種類','内容']].concat(evs.map(e=>[e.ts,e.sid,e.seq,e.pid,e.cls,e.no,e.nick,e.mode,e.place,e.q,e.type,JSON.stringify(e.d)]));
+ const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=sum?'yume_students.csv':'yume_log.csv';a.click();}
+/* 注視の多い星ほど、夜空で赤く大きく光らせる（もう一度押すと元にもどる） */
+function dashHeat(){
+ const R=LOG.dashR;if(!R)return;
+ if(LOG.heatOn){stars.forEach(s=>{s.sp.material.color.setRGB(1,1,1);});LOG.heatOn=false;showNote('星空をもとにもどしました。');return;}
+ const m={};R.W.forEach(w=>m[w.w]=w.dwell+w.ms);const mx=Math.max(1,...Object.values(m));
+ stars.forEach((s,i)=>{const k=Math.pow((m[WORDS[i].w]||0)/mx,.5);s.sp.material.color.setRGB(1,1-.55*k,1-.85*k);});
+ LOG.heatOn=true;$('dash').classList.remove('on');showNote('よく見られた星ほど赤く光っています。もう一度「星空に重ねる」でもどります。');}
+
+$('dashopen').addEventListener('click',()=>{panel('imp',false);dashOpen(LOG.url?'class':'local');});
+if(/[?&]dash=1/.test(location.search))setTimeout(()=>dashOpen(LOG.url?'class':'local'),600);
 loop();
 </script>
 </body>
