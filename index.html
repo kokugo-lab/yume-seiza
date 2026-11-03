@@ -4135,7 +4135,10 @@ const VR_STONE=(function(){const g=new THREE.Group();
 const _ps=new THREE.Vector3();
 function plStone(){
  if(LAND&&LAND.starFrag){VR_STONE.g.visible=false;LAND.starFrag.getWorldPosition(_ps);return {pos:_ps,halo:LAND.starHalo,r:1.9};}
- if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;const z=landKind==='lake'?-3:landKind==='cliff'?-3:-20;VR_STONE.g.position.set(0,landH(0,z)+1.55,z);}
+ if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;
+  /* 足もとに近すぎると、見下ろしたときに「VRをおわる」の向きに入る。少し離れた岸や草の上に置く */
+  const at={lake:[-8,-6.5],cliff:[-9,-2]}[landKind]||[0,-20],x=at[0],z=at[1];
+  VR_STONE.g.position.set(x,Math.max(landH(x,z),landKind==='lake'?LAKE_Y:-1e9)+1.55,z);}
  VR_STONE.g.visible=true;VR_STONE.st.getWorldPosition(_ps);return {pos:_ps,halo:VR_STONE.halo,r:1.9};}
 function plStep(dt,down){
  const S=PL.sign;S.sp.visible=false;
