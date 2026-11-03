@@ -750,15 +750,16 @@ function buildGrass(){
     fragmentShader:'uniform vec3 haze;varying vec3 vc;varying float vD;'+
       'void main(){float f=smoothstep(25.0,110.0,vD);'+
       'gl_FragColor=vec4(mix(vc,haze,f),1.0-f*0.9);}'});
-  grassLines=new THREE.LineSegments(gg,grassMat);world.add(grassLines);}
+  grassLines=new THREE.LineSegments(gg,grassMat);world.add(grassLines);window.__grass0=grassMat;}
 
 function buildWorld(){
   const dome=new THREE.Mesh(new THREE.SphereGeometry(1400,32,22),
     new THREE.ShaderMaterial({side:THREE.BackSide,
-      uniforms:{a:{value:new THREE.Color(0x060a18)},b:{value:new THREE.Color(0x121a2e)}},
+      uniforms:{a:{value:new THREE.Color(0x060a18)},b:{value:new THREE.Color(0x121a2e)},gd:{value:dirOf(95,2)},gc:{value:new THREE.Color(1,.55,.32)},gk:{value:0}},
       vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-      fragmentShader:'uniform vec3 a,b;varying vec3 p;void main(){float h=clamp(normalize(p).y*.5+.5,0.,1.);'+
-        'gl_FragColor=vec4(mix(b,a,h),1.);}'}));
+      fragmentShader:'uniform vec3 a,b,gd,gc;uniform float gk;varying vec3 p;void main(){vec3 n=normalize(p);float h=clamp(n.y*.5+.5,0.,1.);'+
+        'vec3 c=mix(b,a,h);float e=max(dot(n,gd),0.),band=1.-smoothstep(-.05,.5,n.y);'+
+        'c+=gc*gk*(pow(e,8.)*.8+pow(e,2.)*band*.45+band*.1);gl_FragColor=vec4(c,1.);}'}));
   world.add(dome);domeMesh=dome;
   /* 背景の細かい星 */
   const N=1800,pos=new Float32Array(N*3),col=new Float32Array(N*3);
@@ -1861,7 +1862,8 @@ function loop(){
   f.sp.scale.setScalar(2+70*k);f.sp.material.opacity=1-k;
   if(k>=1){skyG.remove(f.sp);flashes.splice(i,1);}}
  stepFeatures(dt);
- if(VR.on){vrStep(dt);if(VR.on){vrRender();return;}}
+ if(VR.on){vrStep(dt);if(VR.on){lakeReflect();vrRender();return;}}
+ lakeReflect();
  renderer.render(scene,camera);}
 
 /* ══ 追加機能 ══ */
@@ -2151,8 +2153,8 @@ function dirOf(azDeg,elDeg){const a=azDeg*Math.PI/180,e=elDeg*Math.PI/180;
    方角：北＝正面（−Z）、東＝右（＋X）。墓は正面（北）にある。 */
 const SEA_Y=-22,SEA_AZ=20;
 const PLACES=[
- {n:'夜の野原',d:'ゆるやかな丘のつづく夜の野原。芝と野の花のあいだを蛍が舞う。花や地面をタップすると、ふわりと浮き上がる。',
-  sky:[0x060a18,0x16213a],haze:0x0c1528,land:'meadow',par:'firefly',moon:[205,32,70],flowers:120,tufts:2600,rocks:14,
+ {n:'夜の野原',d:'すすきの穂が月の光に銀色にゆれる、ひろい野原。丘の上には一本の木。芝と野の花のあいだを蛍が舞う。花や地面をタップすると、ふわりと浮き上がる。',
+  sky:[0x081024,0x223358],haze:0x0c1528,land:'meadow',par:'firefly',moon:[205,40,78],flowers:120,tufts:2600,rocks:14,
   hemi:[0x46598a,0x0b1208,.9],moonI:.55},
  {n:'女の墓',d:'本文の場面。大きな真珠貝で穴を掘って女を埋め、天から落ちて来た星の破片を墓標にした。自分は苔の上に坐って待つ。星の破片や真珠貝をタップしてみよう。',
   sky:[0x05070f,0x18203a],haze:0x0d1222,land:'grave',par:'dew',moon:[160,38,80],flowers:40,tufts:1700,rocks:9,
@@ -2166,15 +2168,82 @@ const PLACES=[
  {n:'雪の夜',d:'しんしんと雪の降る夜。野も岩も白くおおわれている。地面をタップすると雪が舞い上がる。',
   sky:[0x0b1020,0x2d364b],haze:0x2a3246,land:'snow',par:'snow',moon:null,flowers:0,tufts:0,rocks:24,
   hemi:[0x7c88a8,0x2e333e,1.05],moonI:0},
- {n:'暁の丘',d:'夜が明けかける丘の上。東の空に、暁の星がたった一つ瞬いている。',
-  sky:[0x101a40,0x9a5a66],haze:0x4b3652,land:'hill',par:'dew',moon:null,dawn:true,flowers:80,tufts:2300,rocks:12,
-  hemi:[0x7d6c98,0x1c150f,1.05],moonI:0}
+ {n:'暁の丘',d:'夜の丘の上。しばらくいると、東の空がだんだん白んで、暁の星がたった一つ瞬きはじめる。',
+  sky:[0x050a1c,0x16203c],haze:0x0c1426,dawnTo:{sky:[0x2a3c6e,0xd8906c],haze:0x6e4c5c},land:'hill',par:'dew',moon:null,dawn:true,flowers:80,tufts:2300,rocks:12,
+  hemi:[0x7d6c98,0x1c150f,1.05],moonI:0},
+ {n:'夜の崖',d:'海に切り立つ崖の上。はるか下の暗い海で、白い波が砕けている。風が強く、草が一方へなびく。',
+  sky:[0x050914,0x182640],haze:0x0b1729,land:'cliff',par:'none',moon:[18,20,85],flowers:0,tufts:2400,rocks:10,
+  hemi:[0x40557f,0x0a0d08,.85],moonI:.7},
+ {n:'凪いだ湖',d:'風のない夜の湖のほとり。鏡のような湖面に、夜空の星も言葉の星も、そのまま映りこむ。',
+  sky:[0x040816,0x152038],haze:0x0b1426,land:'lake',par:'firefly',moon:[345,24,70],flowers:30,tufts:1800,rocks:10,
+  hemi:[0x46598a,0x0b1208,.85],moonI:.6},
+ {n:'雲の上の峰',d:'雲海の上に突き出た山の頂。足もとを白い雲がゆっくり流れ、遠くの峰だけが雲から顔を出す。',
+  sky:[0x02050f,0x101a33],haze:0x0d1528,land:'peak',par:'none',moon:[230,18,90],flowers:0,tufts:500,rocks:30,
+  hemi:[0x55608a,0x101010,.9],moonI:.8},
+ {n:'竹林の小径',d:'高い竹に囲まれた細い小道。見上げると、葉のすきまから星がのぞく。風が吹くと葉がさやさやと鳴る。',
+  sky:[0x03070f,0x0e1a24],haze:0x08120f,land:'bamboo',par:'firefly',moon:[60,55,60],flowers:0,tufts:900,rocks:4,
+  hemi:[0x3d5a50,0x070a06,.8],moonI:.5}
 ];
 const GRAVE_IDX=1;
 let PLACE=0,LAND=null,landKind='meadow';
 try{PLACE=Math.min(PLACES.length-1,Math.max(0,parseInt(localStorage.getItem('yume_place_v1')||'0',10)||0));}catch(e){}
 
 /* ── 高さ ── */
+/* ── 新しい場所の地形 ── */
+const CLIFF_SEA=-170,LAKE_Y=-17,LAKE_C=84,CLOUD_Y=-125;
+const bambooPathX=z=>5*Math.sin(z*.035)+2*Math.sin(z*.011);
+const PEAKS=[[40,620,-62,150],[150,820,-38,210],[248,700,-80,170],[318,900,-48,230],[95,1000,-30,260]];
+function landH2(x,z,kind,r,h,far){
+ if(kind==='cliff'){
+  /* 正面（北）に向かって約40で崖。その先は海の底へ */
+  const along=-z,edge=27+7*Math.sin(x*.035)+8*(fbm(x*.02+4,1.3,3)-.5),t=along-edge;
+  if(t>0){h=-16-sm(0,15,t)*168+(fbm(x*.06,z*.06,3)-.5)*7*sm(0,6,t)*(1-sm(9,15,t));}
+  else h+=sm(40,330,-along)*(fbm(x*.0045+2,z*.0045+7,4)-.38)*90+far*sm(0,-200,along);
+  /* 遠く左右に、海へ突き出た岬 */
+  const side=sm(380,720,Math.abs(x))*sm(60,320,along);
+  if(side>0)h=Math.max(h,-184+side*(95+55*fbm(x*.008,z*.008,3)));
+  return h;}
+ if(kind==='lake'){
+  const dz=z+LAKE_C,r2=Math.hypot(x*.78,dz),ang=Math.atan2(dz,x);
+  const shoreR=74+6*Math.sin(ang*3+.7)+5*(fbm(x*.02,z*.02,2)-.5);
+  h+=sm(45,330,r)*(fbm(x*.0045+2,z*.0045+7,4)-.42)*70+far;
+  const bowl=sm(shoreR+14,shoreR-10,r2);
+  return h*(1-bowl)+(LAKE_Y-1.5-sm(shoreR,shoreR-40,r2)*12)*bowl;}
+ if(kind==='peak'){
+  const n1=fbm(x*.012+7,z*.012+3,4);
+  h=-16+(fbm(x*.07+3.3,z*.07+1.7,3)-.5)*1.4*sm(4,14,r);
+  h-=Math.pow(sm(7,270,r),.75)*250*(.85+.3*n1);
+  h+=sm(18,220,r)*(fbm(x*.02,z*.02,4)-.5)*60;
+  for(const q of PEAKS){const a=q[0]*Math.PI/180,cx=Math.sin(a)*q[1],cz=-Math.cos(a)*q[1],dd=Math.hypot(x-cx,z-cz);
+   if(dd<q[3]*1.6)h=Math.max(h,q[2]-Math.pow(dd/q[3],1.25)*190+(fbm(x*.02,z*.02,3)-.5)*24);}
+  return h;}
+ if(kind==='bamboo'){
+  return h+sm(45,330,r)*(fbm(x*.0045+2,z*.0045+7,4)-.42)*45+far*.7;}
+ return null;}
+function landColor2(x,z,h,slope,kind,out,n,m,r){
+ if(kind==='peak'){
+  out.setRGB(.19+m*.07,.19+m*.07,.21+m*.07);                                   /* 岩 */
+  if(r<45&&n>.5&&slope<.5)out.lerp(_c2.setRGB(.1,.17,.09),.75);               /* 頂の草 */
+  if(r>300&&h>-95)out.lerp(_c2.setRGB(.72,.76,.84),sm(-95,-70,h));            /* 遠い峰の雪 */
+  return true;}
+ if(kind==='bamboo'){
+  const dp=Math.abs(x-bambooPathX(z));
+  out.setRGB(.13+n*.05,.12+n*.04,.07+n*.02);                                   /* 落ち葉 */
+  out.lerp(_c2.setRGB(.08,.15,.07),m*.5);                                       /* 苔 */
+  if(dp<2.6)out.lerp(_c2.setRGB(.25+m*.05,.21+m*.04,.15+m*.03),sm(2.6,1.2,dp)); /* 小径 */
+  return true;}
+ if(kind==='lake'){
+  out.setRGB(.1+n*.09,.2+n*.1,.09+n*.03);
+  if(h<LAKE_Y+1.2)out.lerp(_c2.setRGB(.24+m*.06,.23+m*.05,.21+m*.04),sm(LAKE_Y+1.2,LAKE_Y+.2,h));  /* 小石の岸 */
+  if(slope>.65)out.lerp(_c2.setRGB(.24,.24,.25),sm(.65,1.1,slope));
+  return true;}
+ if(kind==='cliff'){
+  out.setRGB(.09+n*.07,.17+n*.08,.08+n*.03);
+  out.lerp(_c2.setRGB(.2,.2,.13),m*.3);
+  if(slope>.55)out.lerp(_c2.setRGB(.2+m*.05,.19+m*.05,.19+m*.05),sm(.55,1.,slope));  /* 岩の崖 */
+  if(h<CLIFF_SEA+6)out.setRGB(.1,.1,.11);
+  return true;}
+ return false;}
 function landH(x,z,kind){
  kind=kind||landKind;
  const r=Math.hypot(x,z);
@@ -2188,6 +2257,7 @@ function landH(x,z,kind){
   h+=sm(30,260,-along)*(fbm(x*.005,z*.005,4)-.35)*80;                   /* うしろの丘 */
   h+=sm(-200,-600,along)*0+far*sm(100,-200,along);
   return h;}
+ {const h2=landH2(x,z,kind,r,h,far);if(h2!==null)return h2;}
  if(kind==='hill'){
   h-=sm(28,420,r)*72;
   h+=sm(120,420,r)*(fbm(x*.005+1,z*.005+2,4)-.45)*60+far*.8;
@@ -2200,7 +2270,8 @@ function landH(x,z,kind){
 const _c=new THREE.Color(),_c2=new THREE.Color();
 function landColor(x,z,h,slope,kind,out){
  const r=Math.hypot(x,z),n=fbm(x*.03+9,z*.03+4,3),m=fbm(x*.15,z*.15,2);
- if(kind==='snow'){
+ if(landColor2(x,z,h,slope,kind,out,n,m,r)){}
+ else if(kind==='snow'){
   out.setRGB(.74+m*.1,.79+m*.08,.9);
   if(slope>.75)out.lerp(_c2.setRGB(.22,.23,.27),sm(.75,1.2,slope));}
  else if(kind==='beach'){
@@ -2248,17 +2319,18 @@ let LILY_PT=null,LILY_LT=null;
 /* 浜の水深を、浜をつくる式（landH）から一度だけ焼いておく。
    海の色・波の向き・砕ける波・波打ち際の泡を、ここから決める。
    浅いところほど細かく測れるよう、平方根で詰めて8ビットに入れる。 */
-const BEACH_EXT=420;let BEACH_DEP=null;
-function beachDepthTex(){
- if(BEACH_DEP)return BEACH_DEP;
+const BEACH_EXT=420;const DEP_CACHE={};
+function beachDepthTex(){return depthTex('beach',SEA_Y);}
+function depthTex(kind,seaY){
+ if(DEP_CACHE[kind])return DEP_CACHE[kind];
  const N=320,E=BEACH_EXT,data=new Uint8Array(N*N*4);
  for(let j=0;j<N;j++)for(let i=0;i<N;i++){
-  const x=-E+(i+.5)*2*E/N,z=-E+(j+.5)*2*E/N,d=SEA_Y-landH(x,z,'beach');
+  const x=-E+(i+.5)*2*E/N,z=-E+(j+.5)*2*E/N,d=seaY-landH(x,z,kind);
   const q=Math.max(-1,Math.min(1,Math.sign(d)*Math.sqrt(Math.abs(d)/30))),k=(j*N+i)*4;
   data[k]=Math.round((q*.5+.5)*255);data[k+1]=data[k+2]=0;data[k+3]=255;}
  const t=new THREE.DataTexture(data,N,N,THREE.RGBAFormat);
  t.magFilter=t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;t.needsUpdate=true;
- BEACH_DEP=t;return t;}
+ DEP_CACHE[kind]=t;return t;}
 const GL_NOISE='float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}'+
  'float vn2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);'+
  'return mix(mix(hs(i),hs(i+vec2(1.,0.)),f.x),mix(hs(i+vec2(0.,1.)),hs(i+vec2(1.,1.)),f.x),f.y);}';
@@ -2266,10 +2338,10 @@ const GL_NOISE='float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*4375
 /* ── 海 ── */
 /* 寄せては返す：海面がゆっくり上下して、波打ち際が砂の上を行き来する（砂の「ぬれ」と同じ式） */
 const SWASH_GL='(.22*sin(t*.55)+.1*sin(t*1.27+1.3))';
-function seaMaterial(moonDir,haze){
+function seaMaterial(moonDir,haze,kind,seaY){
  return new THREE.ShaderMaterial({
   transparent:true,
-  uniforms:{t:{value:0},moon:{value:moonDir.clone()},haze:{value:new THREE.Color(haze)},dep:{value:beachDepthTex()},ext:{value:BEACH_EXT}},
+  uniforms:{t:{value:0},moon:{value:moonDir.clone()},haze:{value:new THREE.Color(haze)},dep:{value:depthTex(kind||'beach',seaY===undefined?SEA_Y:seaY)},ext:{value:BEACH_EXT}},
   vertexShader:'uniform float t;varying vec3 wp;void main(){vec4 w=modelMatrix*vec4(position,1.);'+
    'w.y+='+SWASH_GL+';wp=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
   fragmentShader:'uniform float t;uniform vec3 moon;uniform vec3 haze;uniform sampler2D dep;uniform float ext;varying vec3 wp;'+GL_NOISE+
@@ -2337,6 +2409,149 @@ function sandMaterial(moonDir){
     'float spd=step(.985,grain)*pow(max(dot(reflect(vv,vec3(0.,1.,0.)),uMoon),0.),4.)*sandy*(1.-wet)*.22*lodS;\n'+ /* 砂粒のきらり */
     'gl_FragColor.rgb+=vec3(.85,.88,.95)*(spw+spd);');};
  m.userData.U=U;return m;}
+
+/* ══ 新しい場所の小道具 ══ */
+/* すすき（夜の野原）：月の光をうけて銀色にゆれる穂 */
+const SUSUKI_TEX=mkTex((g,s)=>{g.clearRect(0,0,s,s);
+ for(let i=0;i<9;i++){const x0=s*(.3+Math.random()*.4),lean=(Math.random()-.5)*s*.45,top=s*(.05+Math.random()*.25);
+  g.strokeStyle='rgba(120,130,105,1)';g.lineWidth=1.6;g.beginPath();g.moveTo(x0,s);g.quadraticCurveTo(x0+lean*.3,s*.55,x0+lean,top+s*.18);g.stroke();
+  /* 穂：細い線を束ねて、ふわりと */
+  for(let k=0;k<26;k++){const t=k/26,px=x0+lean+(Math.random()-.5)*4,py=top+s*.18-t*s*.2;
+   g.strokeStyle='rgba('+(205+Math.random()*40|0)+','+(205+Math.random()*35|0)+','+(195+Math.random()*30|0)+','+(.55+Math.random()*.4)+')';
+   g.lineWidth=1;g.beginPath();g.moveTo(px,py);g.lineTo(px+(Math.random()-.3)*s*.09,py+s*.035+Math.random()*s*.03);g.stroke();}}
+ /* 葉 */
+ for(let i=0;i<8;i++){const x0=s*(.35+Math.random()*.3),dir=Math.random()<.5?-1:1;
+  g.strokeStyle='rgba(70,95,60,1)';g.lineWidth=2;g.beginPath();g.moveTo(x0,s);g.quadraticCurveTo(x0+dir*s*.15,s*.55,x0+dir*s*(.3+Math.random()*.15),s*(.5+Math.random()*.2));g.stroke();}},256);
+function addSusuki(L,kind){
+ const pg=new THREE.PlaneGeometry(7,13);pg.translate(0,6.2,0);
+ const mt=new THREE.MeshLambertMaterial({map:SUSUKI_TEX,alphaTest:.35,side:THREE.DoubleSide});
+ const cnt=420,inst=new THREE.InstancedMesh(pg,mt,cnt*2),o=new THREE.Object3D(),cc=new THREE.Color();let n=0;
+ for(let k=0;k<cnt*6&&n<cnt*2;k++){
+  const a=Math.random()*6.283,r=7+Math.pow(Math.random(),1.2)*170,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  if(fbm(x*.025+11,z*.025+5,2)<.48)continue;                                  /* まとまって生える */
+  const h=landH(x,z,kind),s=.75+Math.random()*.6;cc.setHSL(.13,.12,.62+Math.random()*.18);
+  for(let q=0;q<2;q++){o.position.set(x,h-.1,z);o.rotation.set(0,a+q*1.5708,(Math.random()-.5)*.2);o.scale.setScalar(s);o.updateMatrix();
+   inst.setMatrixAt(n,o.matrix);if(inst.setColorAt)inst.setColorAt(n,cc);n++;}}
+ inst.count=n;if(inst.instanceColor)inst.instanceColor.needsUpdate=true;L.g.add(inst);}
+/* 丘の上に一本の木（夜空に黒く浮かぶ） */
+function addLoneTree(L,kind){
+ const a=300*Math.PI/180,d=125,x=Math.sin(a)*d,z=-Math.cos(a)*d,h=landH(x,z,kind),g=new THREE.Group();
+ const bark=new THREE.MeshLambertMaterial({color:0x1d1712});
+ const tr=new THREE.Mesh(new THREE.CylinderGeometry(1.3,2.4,34,8),bark);tr.position.set(0,17,0);g.add(tr);
+ [[-.6,.5,9],[.7,.35,8],[.1,-.6,7]].forEach(([dx,dz,len],i)=>{const b=new THREE.Mesh(new THREE.CylinderGeometry(.5,.9,len,6),bark);
+  b.position.set(dx*4,28+i*2,dz*4);b.rotation.set(dz*.9,0,-dx*.9);g.add(b);});
+ const leaf=new THREE.MeshLambertMaterial({color:0x17241a,flatShading:true});
+ for(let i=0;i<11;i++){const s=new THREE.Mesh(new THREE.IcosahedronGeometry(7+Math.random()*5,1),leaf);
+  const t=i/11*6.28;s.position.set(Math.cos(t)*(6+Math.random()*7),36+Math.random()*10,Math.sin(t)*(6+Math.random()*7));g.add(s);}
+ g.position.set(x,h-.5,z);g.rotation.y=Math.random()*6;L.g.add(g);}
+
+/* 竹林：まっすぐな竹と、上のほうに茂る葉 */
+const BAMBOO_TEX=(()=>{const t=mkTex((g,s)=>{const w=64,hh=256;g.canvas.width=w;g.canvas.height=hh;
+ const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,'#2c4a2a');gr.addColorStop(.45,'#5f8a52');gr.addColorStop(.6,'#4e7a45');gr.addColorStop(1,'#223a21');
+ g.fillStyle=gr;g.fillRect(0,0,w,hh);
+ for(let y=0;y<hh;y+=64){g.fillStyle='rgba(20,30,15,.75)';g.fillRect(0,y,w,4);g.fillStyle='rgba(190,210,160,.45)';g.fillRect(0,y+4,w,2);}
+ for(let i=0;i<90;i++){g.fillStyle='rgba(255,255,255,'+(Math.random()*.06)+')';g.fillRect(Math.random()*w,Math.random()*hh,1,6+Math.random()*20);}},64);
+ t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,10);return t;})();
+const BLEAF_TEX=mkTex((g,s)=>{g.clearRect(0,0,s,s);
+ for(let k=0;k<4;k++){const bx=s*(.2+Math.random()*.6),by=s*(.2+Math.random()*.6);
+  for(let i=0;i<7;i++){const a=Math.random()*6.283,L=s*(.16+Math.random()*.14);
+   g.save();g.translate(bx,by);g.rotate(a);g.fillStyle='rgba('+(40+Math.random()*30|0)+','+(70+Math.random()*40|0)+','+(40+Math.random()*20|0)+',1)';
+   g.beginPath();g.moveTo(0,0);g.quadraticCurveTo(L*.5,-s*.035,L,0);g.quadraticCurveTo(L*.5,s*.035,0,0);g.fill();g.restore();}}},128);
+function addBamboo(L,kind){
+ const cg=new THREE.CylinderGeometry(1,1,1,9,1,true);cg.translate(0,.5,0);
+ const cm=new THREE.MeshLambertMaterial({map:BAMBOO_TEX});
+ const N=430,inst=new THREE.InstancedMesh(cg,cm,N),o=new THREE.Object3D(),cc=new THREE.Color(),tops=[];let n=0;
+ for(let k=0;k<N*5&&n<N;k++){
+  const a=Math.random()*6.283,r=5+Math.pow(Math.random(),.9)*95,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  if(Math.abs(x-bambooPathX(z))<4.2)continue;                                   /* 小径をあける */
+  const h=landH(x,z,kind),R=.45+Math.random()*.25,H=70+Math.random()*55;
+  o.position.set(x,h-.3,z);o.rotation.set((Math.random()-.5)*.05,0,(Math.random()-.5)*.05);o.scale.set(R,H,R);o.updateMatrix();
+  inst.setMatrixAt(n,o.matrix);cc.setHSL(.27+Math.random()*.05,.3,.45+Math.random()*.2);if(inst.setColorAt)inst.setColorAt(n,cc);
+  tops.push([x,h+H,z,H]);n++;}
+ inst.count=n;if(inst.instanceColor)inst.instanceColor.needsUpdate=true;L.g.add(inst);
+ /* 葉：竹の上三分の一に、細い葉の房 */
+ const lg=new THREE.PlaneGeometry(9,9),lm=new THREE.MeshLambertMaterial({map:BLEAF_TEX,alphaTest:.4,side:THREE.DoubleSide});
+ const M=1500,li=new THREE.InstancedMesh(lg,lm,M);let m=0;
+ for(let k=0;k<M;k++){const t=tops[(Math.random()*tops.length)|0];if(!t)break;
+  const y=t[1]-Math.random()*t[3]*.38;
+  o.position.set(t[0]+(Math.random()-.5)*7,y,t[2]+(Math.random()-.5)*7);o.rotation.set(Math.random()*6.3,Math.random()*6.3,Math.random()*6.3);
+  o.scale.setScalar(.8+Math.random()*.7);o.updateMatrix();li.setMatrixAt(m,o.matrix);cc.setHSL(.28,.35,.3+Math.random()*.2);if(li.setColorAt)li.setColorAt(m,cc);m++;}
+ li.count=m;if(li.instanceColor)li.instanceColor.needsUpdate=true;L.g.add(li);}
+
+/* 雲海：月に照らされた白い雲が、ゆっくり流れる */
+function cloudMaterial(moonDir,haze,scale,speed,alpha){
+ return new THREE.ShaderMaterial({transparent:true,depthWrite:false,
+  uniforms:{t:{value:0},moon:{value:moonDir.clone()},haze:{value:new THREE.Color(haze)}},
+  vertexShader:'varying vec3 wp;void main(){vec4 w=modelMatrix*vec4(position,1.);wp=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+  fragmentShader:'uniform float t;uniform vec3 moon;uniform vec3 haze;varying vec3 wp;'+GL_NOISE+
+   'float fb(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*vn2(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return s;}'+
+   'void main(){vec2 p=wp.xz*'+scale.toFixed(4)+'+vec2(t*'+speed.toFixed(4)+',t*'+(speed*.4).toFixed(4)+');'+
+   ' float q=fb(p+.6*vec2(fb(p*.7+t*.002),fb(p*.7-3.1)));'+
+   ' float cov=smoothstep(.3,.72,q);'+
+   ' vec2 hm=normalize(vec2(moon.x,moon.z)+1e-4),hp=normalize(wp.xz+1e-4);float mf=pow(max(dot(hp,hm),0.),3.);'+
+   ' vec3 lit=vec3(.66,.71,.82)*(.6+.55*q)*(.8+.35*mf);'+
+   ' vec3 c=mix(vec3(.1,.13,.2),lit,cov);'+
+   ' float L=length(wp.xz);c=mix(c,haze,smoothstep(300.,1200.,L)*.75);'+
+   ' float a=mix('+(alpha*.55).toFixed(2)+','+alpha.toFixed(2)+',cov)*(1.-smoothstep(1050.,1290.,L));'+
+   ' gl_FragColor=vec4(c,a);}'});}
+
+/* 凪いだ湖：鏡のように、夜空（言葉の星も）を映す */
+const LK={vcam:new THREE.PerspectiveCamera(),tm:new THREE.Matrix4(),N:new THREE.Vector3(0,1,0),plane:new THREE.Plane()};
+const _lv=new THREE.Vector3(),_lt=new THREE.Vector3(),_lr=new THREE.Matrix4(),_lc=new THREE.Vector3(),_lla=new THREE.Vector3(),_lpos=new THREE.Vector3();
+function lakeMaterial(moonDir,haze,rt){
+ return new THREE.ShaderMaterial({transparent:true,
+  uniforms:{t:{value:0},rt:{value:rt.texture},tm:{value:new THREE.Matrix4()},haze:{value:new THREE.Color(haze)},dep:{value:depthTex('lake',LAKE_Y)},ext:{value:BEACH_EXT}},
+  vertexShader:'uniform mat4 tm;varying vec4 vUv;varying vec3 wp;void main(){vUv=tm*vec4(position,1.);vec4 w=modelMatrix*vec4(position,1.);wp=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+  fragmentShader:'uniform float t;uniform sampler2D rt;uniform vec3 haze;uniform sampler2D dep;uniform float ext;varying vec4 vUv;varying vec3 wp;'+GL_NOISE+
+   'float depthAt(vec2 xz){vec2 uv=(xz+ext)/(2.*ext);if(uv.x<0.||uv.y<0.||uv.x>1.||uv.y>1.)return 30.;float q=texture2D(dep,uv).r*2.-1.;return sign(q)*q*q*30.;}'+
+   'void main(){vec2 p=wp.xz;'+
+   ' vec2 rp=(vec2(vn2(p*.22+t*.12),vn2(p.yx*.22-t*.1))-.5)*.008+(vec2(vn2(p*1.4+t*.4),vn2(p.yx*1.4-t*.35))-.5)*.0025;'+
+   ' vec4 uv=vUv;uv.xy+=rp*uv.w;'+
+   ' vec3 refl=texture2DProj(rt,uv).rgb;'+
+   ' vec3 v=normalize(wp-cameraPosition);float fr=.5+.5*pow(1.-max(dot(-v,vec3(0.,1.,0.)),0.),3.);'+
+   ' vec3 c=mix(vec3(.008,.02,.035),refl*1.15,fr);'+
+   ' float d=depthAt(p);c+=vec3(.02,.03,.04)*(1.-smoothstep(0.,.25,d));'+
+   ' c=mix(c,haze,smoothstep(250.,1100.,length(p))*.6);'+
+   ' gl_FragColor=vec4(c,smoothstep(0.,.35,d));}'});}
+function vrOverlays(){const a=[vrExit,FR_CAP.sp,PL.sign.sp,PL.sign.lb,PL.lab,VR.panel&&VR.panel.mesh,PL.panel&&PL.panel.mesh,VR_STONE.g];
+ FR.list.forEach(f=>a.push(f.sp));FR.fly.forEach(q=>a.push(q.sp));return a.filter(Boolean);}
+function lakeReflect(){
+ const W=LAND&&LAND.lake;if(!W)return;
+ const m=W.mesh;rig.updateMatrixWorld(true);m.updateMatrixWorld();
+ _lpos.setFromMatrixPosition(m.matrixWorld);_lc.setFromMatrixPosition(camera.matrixWorld);
+ _lr.extractRotation(camera.matrixWorld);_lla.set(0,0,-1).applyMatrix4(_lr).add(_lc);
+ _lv.subVectors(_lpos,_lc);if(_lv.dot(LK.N)>0)return;
+ _lv.reflect(LK.N).negate().add(_lpos);
+ _lt.subVectors(_lpos,_lla).reflect(LK.N).negate().add(_lpos);
+ const vc=LK.vcam;vc.position.copy(_lv);vc.up.set(0,1,0).applyMatrix4(_lr).reflect(LK.N);vc.lookAt(_lt);
+ vc.near=camera.near;vc.far=camera.far;vc.updateMatrixWorld();vc.projectionMatrix.copy(camera.projectionMatrix);
+ LK.tm.set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1).multiply(vc.projectionMatrix).multiply(vc.matrixWorldInverse).multiply(m.matrixWorld);
+ const hide=[m,rig].concat(typeof vrOverlays==='function'?vrOverlays():[]),prev=hide.map(o=>o.visible);hide.forEach(o=>o.visible=false);
+ const cp=renderer.clippingPlanes,st=renderer.getScissorTest();renderer.setScissorTest(false);
+ renderer.clippingPlanes=[LK.plane.set(LK.N,-_lpos.y)];
+ renderer.setRenderTarget(W.rt);renderer.clear();renderer.render(scene,vc);renderer.setRenderTarget(null);
+ renderer.clippingPlanes=cp;renderer.setScissorTest(st);hide.forEach((o,i)=>o.visible=prev[i]);
+ W.mat.uniforms.tm.value.copy(LK.tm);}
+
+/* 場所ごとの組み立て（buildLand から呼ぶ） */
+function buildExtras(L,P,kind,md){
+ const mdir=md||dirOf(SEA_AZ,10);
+ if(kind==='meadow'){addSusuki(L,kind);addLoneTree(L,kind);}
+ if(kind==='cliff'){
+  const mt=seaMaterial(mdir,P.haze,'cliff',CLIFF_SEA);
+  const sea=new THREE.Mesh(new THREE.CircleGeometry(1300,64),mt);sea.rotation.x=-Math.PI/2;sea.position.y=CLIFF_SEA;
+  L.g.add(sea);L.sea=sea;L.waters.push(mt);}
+ if(kind==='lake'){
+  const rt=new THREE.WebGLRenderTarget(640,640,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
+  const mt=lakeMaterial(mdir,P.haze,rt);
+  const w=new THREE.Mesh(new THREE.CircleGeometry(170,96),mt);w.rotation.x=-Math.PI/2;w.position.set(0,LAKE_Y,-LAKE_C);
+  L.g.add(w);L.sea=w;L.waters.push(mt);L.lake={mesh:w,rt:rt,mat:mt};}
+ if(kind==='peak'){
+  [[CLOUD_Y,.0038,.012,.97],[CLOUD_Y+22,.0062,.02,.42]].forEach(([y,sc,sp,al])=>{
+   const mt=cloudMaterial(mdir,P.haze,sc,sp,al);
+   const c=new THREE.Mesh(new THREE.CircleGeometry(1300,64),mt);c.rotation.x=-Math.PI/2;c.position.y=y;c.renderOrder=-1;
+   L.g.add(c);L.waters.push(mt);});}
+ if(kind==='bamboo')addBamboo(L,kind);}
 
 /* ── 岩 ── */
 function makeRock(size,snowy,seed){
@@ -2412,16 +2627,18 @@ function clearLand(){
  world.remove(LAND.g);
  LAND.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&o.material.dispose&&o.material!==LAND.keep)o.material.dispose();});
  LAND.lifts.forEach(l=>{if(l.halo)world.remove(l.halo);});
- LAND=null;grassMat=null;}
+ if(LAND.lake)LAND.lake.rt.dispose();
+ LAND=null;grassMat=window.__grass0||null;}
+const _qWind=new THREE.Quaternion().setFromEuler(new THREE.Euler(.42,0,.12));   /* 崖：海からの風で、草が陸のほうへなびく */
 function buildLand(i){
  clearLand();
  const P=PLACES[i],kind=P.land;landKind=kind;
- const L={g:new THREE.Group(),flowers:[],lifts:[],taps:[],shells:[],par:null,halos:[],kind:kind};
+ const L={g:new THREE.Group(),flowers:[],lifts:[],taps:[],shells:[],par:null,halos:[],kind:kind,waters:[]};
  /* 光 */
- L.g.add(new THREE.HemisphereLight(P.hemi[0],P.hemi[1],P.hemi[2]));
+ L.hemi=new THREE.HemisphereLight(P.hemi[0],P.hemi[1],P.hemi[2]);L.g.add(L.hemi);
  const md=P.moon?dirOf(P.moon[0],P.moon[1]):null;
  if(md){const dl=new THREE.DirectionalLight(0xc8d6ff,P.moonI);dl.position.copy(md).multiplyScalar(500);L.g.add(dl);}
- if(P.dawn){const dl=new THREE.DirectionalLight(0xffb48c,.55);dl.position.copy(dirOf(95,6)).multiplyScalar(500);L.g.add(dl);}
+ if(P.dawn){const dl=new THREE.DirectionalLight(0xffb48c,P.dawnTo?0:.55);dl.position.copy(dirOf(95,6)).multiplyScalar(500);L.g.add(dl);L.dawnL=dl;}
  if(kind==='snow'){const dl=new THREE.DirectionalLight(0xb8c4e0,.35);dl.position.set(-200,400,-100);L.g.add(dl);}
  /* 地面：中心ほど細かい格子 */
  const N=180,geo=new THREE.PlaneGeometry(2,2,N,N);geo.rotateX(-Math.PI/2);
@@ -2437,9 +2654,10 @@ function buildLand(i){
  L.g.add(ground);L.ground=ground;L.keep=ground.material.map;if(gmat.userData.U)L.sandU=gmat.userData.U;
  /* 海 */
  if(kind==='beach'){
-  const sm2=seaMaterial(md||dirOf(SEA_AZ,10),P.haze);
+  const sm2=seaMaterial(md||dirOf(SEA_AZ,10),P.haze,'beach',SEA_Y);
   const sea=new THREE.Mesh(new THREE.CircleGeometry(1300,64),sm2);sea.rotation.x=-Math.PI/2;sea.position.y=SEA_Y;
-  L.g.add(sea);L.sea=sea;grassMat=sm2;}
+  L.g.add(sea);L.sea=sea;L.waters.push(sm2);}
+ buildExtras(L,P,kind,md);
  /* 芝（草の株） */
  if(P.tufts){
   const tg=new THREE.PlaneGeometry(1.5,1.15);tg.translate(0,.55,0);
@@ -2451,11 +2669,15 @@ function buildLand(i){
   for(let k=0;k<cnt*4&&n<cnt*2;k++){
    const a=Math.random()*6.283,r=2.5+Math.pow(Math.random(),1.7)*180,x=Math.cos(a)*r,z=Math.sin(a)*r,h=landH(x,z,kind);
    if(h<SEA_Y+.8)continue;
+   if(kind==='lake'&&h<LAKE_Y+.4)continue;
+   if(kind==='peak'&&h<CLOUD_Y)continue;
+   if(kind==='bamboo'&&Math.abs(x-bambooPathX(z))<2.4)continue;
    if(kind==='grave'&&Math.abs(x)<7&&z<-13&&z>-31)continue;
    if(kind==='beach'&&h<-15.2)continue;                 /* 砂の上には生やさない */
    const s=(.6+Math.random()*.8)*(1+r/160);
    if(snowy)cc.setHSL(.11+Math.random()*.04,.25,.62+Math.random()*.15);else cc.setHSL(.24+Math.random()*.06,.35,.32+Math.random()*.22);
    for(let q=0;q<2;q++){o.position.set(x,h-.05,z);o.rotation.set(0,a+q*1.5708,(Math.random()-.5)*.25);
+    if(kind==='cliff')o.quaternion.premultiply(_qWind);
     o.scale.set(s,s*(.8+Math.random()*.5),s);o.updateMatrix();inst.setMatrixAt(n,o.matrix);
     if(inst.setColorAt)inst.setColorAt(n,cc);n++;}}
   inst.count=n;if(inst.instanceColor)inst.instanceColor.needsUpdate=true;L.g.add(inst);}
@@ -2483,13 +2705,14 @@ function buildLand(i){
  if(P.dawn){
   const ds=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xfff2d8,transparent:true,depthTest:false,
    blending:THREE.AdditiveBlending}));ds.position.copy(dirOf(95,14)).multiplyScalar(700);ds.scale.setScalar(55);
-  ds.userData.tw=1;L.g.add(ds);L.halos.push(ds);}
+  ds.userData.tw=1;L.g.add(ds);L.halos.push(ds);L.ds=ds;if(P.dawnTo)ds.userData.k=0;}
  /* 花（タップで浮き上がる） */
  const addLift=(obj,base,h)=>{obj.position.copy(base);L.g.add(obj);
   L.flowers.push({obj:obj,base:base.clone(),h:h,s0:obj.scale.clone(),st:'rest',t:0,ph:Math.random()*6.3});};
  for(let k=0;k<(P.flowers||0);k++){
   const a=Math.random()*6.283,r=4+Math.pow(Math.random(),1.4)*70,x=Math.cos(a)*r,z=Math.sin(a)*r,h=landH(x,z,kind);
   if(kind==='grave'&&Math.abs(x)<7&&z<-13&&z>-31)continue;
+  if(kind==='lake'&&h<LAKE_Y+.3)continue;
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:FLOWER_TEX[k%FLOWER_TEX.length],transparent:true,
    color:kind==='hill'?0xf0e0d8:0xc8ccd8,depthWrite:false}));
   sp.center.set(.5,0);const s=.9+Math.random()*.6;sp.scale.set(s,s,1);
@@ -2617,9 +2840,23 @@ function stepLand(dt){
  if(!LAND)return;
  stepAmbient(dt);stepLifts(dt);
  if(LAND.sandU)LAND.sandU.t.value=T;
- LAND.halos.forEach(h=>{h.material.opacity=.6+.35*Math.sin(T*3.1);});
+ LAND.waters.forEach(m=>{m.uniforms.t.value=T;});
+ stepDawn(dt);
+ LAND.halos.forEach(h=>{h.material.opacity=(.6+.35*Math.sin(T*3.1))*(h.userData.k===undefined?1:h.userData.k);});
  LAND.g.children.forEach(c=>{if(c.isGroup)c.children.forEach(d=>{if(d.userData.halo&&!d.userData.vr)d.material.opacity=.05+.03*Math.sin(T*1.7);});});
  LAND.shells.forEach((s,i)=>{const gl=s.userData.glint;if(gl)gl.material.opacity=Math.pow(Math.max(0,Math.sin(T*1.3+i*2.1)),12)*.6;});}
+
+/* 暁の丘：着いてから約2分半かけて、夜がだんだん明けていく */
+const DAWN_DUR=150;const _dc=new THREE.Color();
+function stepDawn(dt){
+ const P=PLACES[PLACE];if(!LAND||!P.dawnTo||H.on)return;
+ LAND.dawnT=(LAND.dawnT||0)+dt;const k=sm(3,DAWN_DUR,LAND.dawnT);
+ if(Math.abs(k-(LAND.dawnK===undefined?-1:LAND.dawnK))<.002)return;LAND.dawnK=k;
+ const U=domeMesh.material.uniforms;
+ U.a.value.setHex(P.sky[0]).lerp(_dc.setHex(P.dawnTo.sky[0]),k);U.b.value.setHex(P.sky[1]).lerp(_dc.setHex(P.dawnTo.sky[1]),k);U.gk.value=k*.75;
+ HAZE.setHex(P.haze).lerp(_dc.setHex(P.dawnTo.haze),k);if(hzMesh)hzMesh.material.uniforms.col.value.copy(HAZE);
+ if(LAND.dawnL)LAND.dawnL.intensity=.75*k;if(LAND.hemi)LAND.hemi.intensity=P.hemi[2]*(.6+.55*k);
+ if(LAND.ds)LAND.ds.userData.k=sm(.35,.8,k);}
 
 /* ── 場所の切りかえ ── */
 function applyPlace(i,quiet){
@@ -2627,7 +2864,7 @@ function applyPlace(i,quiet){
  try{applyPlaceInner(i,quiet);}catch(e){if(window.__showErr)window.__showErr('場所の作成：'+(e&&e.message?e.message:e));}}
 function applyPlaceInner(i,quiet){
  const P=PLACES[i];
- domeMesh.material.uniforms.a.value.setHex(P.sky[0]);domeMesh.material.uniforms.b.value.setHex(P.sky[1]);
+ domeMesh.material.uniforms.a.value.setHex(P.sky[0]);domeMesh.material.uniforms.b.value.setHex(P.sky[1]);domeMesh.material.uniforms.gk.value=0;
  HAZE.setHex(P.haze);if(hzMesh)hzMesh.material.uniforms.col.value.setHex(P.haze);
  buildLand(i);
  if(soundOn)ambStart();
@@ -3138,7 +3375,11 @@ const AMB_SET={
  beach:{wind:.02,windF:500,waves:.24,root:60,dens:.8},
  snow:{wind:.045,windF:220,waves:0,root:64,dens:.55},
  hill:{wind:.025,windF:380,waves:0,root:65,dens:1.1},
- lily:{wind:.02,windF:600,waves:0,root:67,dens:1.3}};
+ lily:{wind:.02,windF:600,waves:0,root:67,dens:1.3},
+ cliff:{wind:.07,windF:240,waves:.16,root:55,dens:.6},
+ lake:{wind:.008,windF:700,waves:0,root:64,dens:.9},
+ peak:{wind:.05,windF:300,waves:0,root:69,dens:.7},
+ bamboo:{wind:.035,windF:900,waves:0,root:58,dens:.8}};
 const PROG=[[0,7,11,16],[-3,4,7,12],[-7,0,4,9],[-5,2,7,14]];   /* Ⅰ→Ⅵm→Ⅳ→Ⅴsus のゆっくりした進行 */
 const PENTA_S=[0,2,4,7,9];
 const mtof=m=>440*Math.pow(2,(m-69)/12);
@@ -3771,7 +4012,7 @@ function headStep(){
 const PL={yaw:null,t:0,gaze:false,panel:null,hot:[],msg:'',msgT:0,lab:null,labT:0};
 /* 真下の「VRをおわる」のそば（約53°下）。ふだんの視界には入らない */
 const PL_HOLD=1.5,PL_PICK=1.2,PL_EL=-.93,PL_R=30,PL_OFF=0;
-const PLW=1024,PLH=1120;
+const PLW=1024,PLH=168+Math.ceil(PLACES.length/2)*200+40;
 /* 草の上に落ちた、小さな星のかけら（輪や文字はなし。見つめると少しずつ明るくなる） */
 PL.sign=(function(){
  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xfff1cf,transparent:true,depthTest:false,blending:THREE.AdditiveBlending,opacity:.55}));
@@ -3799,17 +4040,17 @@ function plDraw(){
   if(pr>0){g.save();rrect(g,bx,by,bw,bh,42);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
   g.fillStyle='#fff';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText('✕ 閉じる',bx+bw/2,by+bh/2+2);g.textAlign='left';g.textBaseline='top';
   PL.hot.push({id:'plclose',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:plClose,hold:1.7});}
- const top=pad+120,gw=(W-pad*2-24)/2,gh=262;
+ const top=pad+120,gw=(W-pad*2-24)/2,gh=180;
  PLACES.map((p,i)=>{const col=i%2,row=Math.floor(i/2),x=pad+col*(gw+24),y=top+row*(gh+20),id='pl'+i,cur=(i===PLACE);
   const pr=(VR.hot===id)?VR.ht/PL_PICK:0;
   g.fillStyle=cur?'rgba(232,200,106,.28)':'#fffaf0';rrect(g,x,y,gw,gh,24);g.fill();
   if(pr>0){g.save();rrect(g,x,y,gw,gh,24);g.clip();g.fillStyle='rgba(232,200,106,.45)';g.fillRect(x,y,gw*pr,gh);g.restore();}
   g.strokeStyle=cur?'#c9a34a':'rgba(107,102,92,.3)';g.lineWidth=cur?4:2;rrect(g,x,y,gw,gh,24);g.stroke();
-  g.fillStyle='#26231f';g.font='700 50px '+VRF;g.fillText(p.n,x+26,y+22);
+  g.fillStyle='#26231f';g.font='700 46px '+VRF;g.fillText(p.n,x+24,y+18);
   if(cur){g.fillStyle='#8a6a1c';g.font='600 28px '+VRF;g.textAlign='right';g.fillText('いまここ',x+gw-22,y+34);g.textAlign='left';}
-  g.fillStyle='#5f5a50';g.font='500 30px '+VRF;
-  const d=p.d.split('。')[0]+'。',al=wrapJ(g,d,gw-52),ls=al.slice(0,4);if(al.length>4)ls[3]=ls[3].replace(/.$/,'…');
-  ls.forEach((l,m)=>g.fillText(l,x+26,y+92+m*40));
+  g.fillStyle='#5f5a50';g.font='500 28px '+VRF;
+  const d=p.d.split('。')[0]+'。',al=wrapJ(g,d,gw-48),ls=al.slice(0,2);if(al.length>2)ls[1]=ls[1].replace(/.$/,'…');
+  ls.forEach((l,m)=>g.fillText(l,x+24,y+84+m*38));
   if(!cur)PL.hot.push({id:id,x:x,y:y,w:gw,h:gh,act:()=>plGo(i),hold:PL_PICK});});
  if(PL.msg&&performance.now()<PL.msgT){g.fillStyle='rgba(143,29,61,.94)';rrect(g,pad,H-pad-80,W-pad*2,80,20);g.fill();
   g.fillStyle='#fff';g.font='600 34px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText(PL.msg,W/2,H-pad-40);g.textAlign='left';g.textBaseline='top';}
@@ -3817,7 +4058,7 @@ function plDraw(){
 function plOpen(){
  plClose();vrClosePanel();
  const cv=document.createElement('canvas');cv.width=PLW;cv.height=PLH;const tx=new THREE.CanvasTexture(cv);
- const PW=38,PH=PW*PLH/PLW;
+ const PW=40,PH=PW*PLH/PLW;
  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(PW,PH),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthTest:false,side:THREE.DoubleSide}));
  mesh.renderOrder=997;
  const ST=PL.st||plStone(),y=Math.atan2(ST.pos.x,ST.pos.z),sEl=Math.asin(ST.pos.y/ST.pos.length()),R=46;
@@ -3847,7 +4088,7 @@ const VR_STONE=(function(){const g=new THREE.Group();
 const _ps=new THREE.Vector3();
 function plStone(){
  if(LAND&&LAND.starFrag){VR_STONE.g.visible=false;LAND.starFrag.getWorldPosition(_ps);return {pos:_ps,halo:LAND.starHalo,r:1.9};}
- if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;const z=-20;VR_STONE.g.position.set(0,landH(0,z)+1.55,z);}
+ if(VR_STONE.for!==PLACE){VR_STONE.for=PLACE;const z=landKind==='lake'?-12:-20;VR_STONE.g.position.set(0,landH(0,z)+1.55,z);}
  VR_STONE.g.visible=true;VR_STONE.st.getWorldPosition(_ps);return {pos:_ps,halo:VR_STONE.halo,r:1.9};}
 function plStep(dt,down){
  const S=PL.sign;S.sp.visible=false;
