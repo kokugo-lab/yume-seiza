@@ -405,7 +405,7 @@ ol.fr li{margin-bottom:6px}
 /* ───── VRゴーグル（二画面） ───── */
 #vrbtn{left:12px;top:calc(92px + env(safe-area-inset-top));background:rgba(232,200,106,.95);color:#241c08;font-weight:600}
 #vrcover,#vrrot,#vrmsg{display:none}
-body.vr #hud,body.vr #sinfo,body.vr #sheet,body.vr #note,body.vr #mission,body.vr #tell,body.vr #namebox{display:none!important}
+body.vr #hud,body.vr #sinfo,body.vr #sheet,body.vr #note,body.vr #mission,body.vr #tell,body.vr #namebox,body.vr #plname{display:none!important}
 body.vr #vrcover{display:block;position:fixed;inset:0;z-index:40;background:transparent}
 body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:#000}
 #vrrot.on{display:flex;position:fixed;inset:0;z-index:41;background:rgba(5,7,15,.94);color:#f2ece0;align-items:center;justify-content:center;
@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>左下の道しるべを見つめると場所をかえられます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -3609,7 +3609,7 @@ function vrPress(hp,hot,draw,dt){
  if(id!==VR.hot){const was=VR.hot;VR.hot=id;VR.ht=0;VR.done=false;draw();if(was)vrRedrawAll();}
  if(b&&!VR.done){VR.ht+=dt;if(VR.ht>=(b.hold||VR_PRESS)){VR.done=true;VR.ht=0;b.act();}else draw();}
  VR.gaze=-1;VR.gt=0;vrRing(b&&!VR.done?VR.ht/(b.hold||VR_PRESS):0);}
-function vrRedrawAll(){if(VR.panel)vrDrawPanel();}
+function vrRedrawAll(){if(VR.panel)vrDrawPanel();if(PL.panel)plDraw();}
 /* ── 頭のジェスチャー（ためし）：うなずく＝☆素敵をつける／首を横に振る＝素敵を外す ──
    向きの変化だけを見る。いま見つめている文（札の行）か、足もとのかけらが対象。
    動きの始まりに見ていたものを対象にする（うなずくと視線が下へずれるため）。 */
@@ -3685,6 +3685,97 @@ function headStep(){
  else if(kind==='shake'&&g.t==='row'){
   if(isFav(g.fo)){vrFav(g.fo);headHint('首ふり（2往復）：素敵を外しました',true);}}
  else if(kind==='shake'&&g.t==='frag'){const i=FR.list.findIndex(f=>f.k===g.k);if(i>=0)fragRemove(i);}}
+/* ── 場所の道しるべ：足もと（左前）の光る道しるべを見つめると、場所をえらぶ札が開く ── */
+const PL={yaw:null,t:0,gaze:false,panel:null,hot:[],msg:'',msgT:0,lab:null,labT:0};
+const PL_HOLD=1.5,PL_PICK=1.2,PL_EL=-.56,PL_R=30,PL_OFF=-.78;
+const PLW=1024,PLH=1120;
+PL.sign=(function(){const cv=document.createElement('canvas');cv.width=cv.height=256;const tx=new THREE.CanvasTexture(cv);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
+ sp.scale.setScalar(6.6);sp.renderOrder=995;sp.visible=false;scene.add(sp);return {cv:cv,g:cv.getContext('2d'),tx:tx,sp:sp,q:-1};})();
+function plSignDraw(k){const S=PL.sign,q=Math.round(k*24);if(q===S.q)return;S.q=q;
+ const g=S.g,c=128;g.clearRect(0,0,256,256);
+ const r=g.createRadialGradient(c,c-10,0,c,c-10,110);r.addColorStop(0,'rgba(255,236,180,.55)');r.addColorStop(.6,'rgba(232,200,106,.12)');r.addColorStop(1,'rgba(232,200,106,0)');
+ g.fillStyle=r;g.fillRect(0,0,256,256);
+ /* 方位のしるし */
+ g.fillStyle='rgba(12,17,32,.7)';g.beginPath();g.arc(c,c-14,62,0,7);g.fill();
+ g.strokeStyle='rgba(232,200,106,.9)';g.lineWidth=4;g.beginPath();g.arc(c,c-14,62,0,7);g.stroke();
+ g.fillStyle='#f3d98a';g.beginPath();
+ [[0,-46],[10,-10],[46,0],[10,10],[0,46],[-10,10],[-46,0],[-10,-10]].forEach((p,i)=>i?g.lineTo(c+p[0],c-14+p[1]):g.moveTo(c+p[0],c-14+p[1]));g.closePath();g.fill();
+ if(q>0){g.strokeStyle='#ffe9a8';g.lineWidth=9;g.lineCap='round';g.beginPath();g.arc(c,c-14,76,-Math.PI/2,-Math.PI/2+q/24*Math.PI*2);g.stroke();}
+ g.fillStyle='#f2ece0';g.font='700 36px '+VRF;g.textAlign='center';g.textBaseline='middle';
+ g.shadowColor='rgba(0,0,0,.9)';g.shadowBlur=8;g.fillText('場所をかえる',c,c+90);g.shadowBlur=0;
+ S.tx.needsUpdate=true;}
+function plDraw(){
+ const P=PL.panel;if(!P)return;
+ const g=P.g,W=PLW,H=PLH,pad=48;
+ g.clearRect(0,0,W,H);g.fillStyle='rgba(246,244,238,.96)';rrect(g,0,0,W,H,36);g.fill();
+ g.textAlign='left';g.textBaseline='top';
+ g.fillStyle='#2b4a6f';g.font='700 70px '+VRF;g.fillText('場所をかえる',pad,pad);
+ PL.hot=[];
+ {const bx=W-pad-230,by=pad,bw=230,bh=84,pr=(VR.hot==='plclose')?VR.ht/1.7:0;
+  g.fillStyle='#2b4a6f';rrect(g,bx,by,bw,bh,42);g.fill();
+  if(pr>0){g.save();rrect(g,bx,by,bw,bh,42);g.clip();g.fillStyle='rgba(232,200,106,.7)';g.fillRect(bx,by,bw*pr,bh);g.restore();}
+  g.fillStyle='#fff';g.font='700 38px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText('✕ 閉じる',bx+bw/2,by+bh/2+2);g.textAlign='left';g.textBaseline='top';
+  PL.hot.push({id:'plclose',x:bx-14,y:by-14,w:bw+28,h:bh+28,act:plClose,hold:1.7});}
+ const top=pad+120,gw=(W-pad*2-24)/2,gh=262;
+ PLACES.map((p,i)=>{const col=i%2,row=Math.floor(i/2),x=pad+col*(gw+24),y=top+row*(gh+20),id='pl'+i,cur=(i===PLACE);
+  const pr=(VR.hot===id)?VR.ht/PL_PICK:0;
+  g.fillStyle=cur?'rgba(232,200,106,.28)':'#fffaf0';rrect(g,x,y,gw,gh,24);g.fill();
+  if(pr>0){g.save();rrect(g,x,y,gw,gh,24);g.clip();g.fillStyle='rgba(232,200,106,.45)';g.fillRect(x,y,gw*pr,gh);g.restore();}
+  g.strokeStyle=cur?'#c9a34a':'rgba(107,102,92,.3)';g.lineWidth=cur?4:2;rrect(g,x,y,gw,gh,24);g.stroke();
+  g.fillStyle='#26231f';g.font='700 50px '+VRF;g.fillText(p.n,x+26,y+22);
+  if(cur){g.fillStyle='#8a6a1c';g.font='600 28px '+VRF;g.textAlign='right';g.fillText('いまここ',x+gw-22,y+34);g.textAlign='left';}
+  g.fillStyle='#5f5a50';g.font='500 30px '+VRF;
+  const d=p.d.split('。')[0]+'。',al=wrapJ(g,d,gw-52),ls=al.slice(0,4);if(al.length>4)ls[3]=ls[3].replace(/.$/,'…');
+  ls.forEach((l,m)=>g.fillText(l,x+26,y+92+m*40));
+  if(!cur)PL.hot.push({id:id,x:x,y:y,w:gw,h:gh,act:()=>plGo(i),hold:PL_PICK});});
+ if(PL.msg&&performance.now()<PL.msgT){g.fillStyle='rgba(143,29,61,.94)';rrect(g,pad,H-pad-80,W-pad*2,80,20);g.fill();
+  g.fillStyle='#fff';g.font='600 34px '+VRF;g.textAlign='center';g.textBaseline='middle';g.fillText(PL.msg,W/2,H-pad-40);g.textAlign='left';g.textBaseline='top';}
+ P.tx.needsUpdate=true;}
+function plOpen(){
+ plClose();vrClosePanel();
+ const cv=document.createElement('canvas');cv.width=PLW;cv.height=PLH;const tx=new THREE.CanvasTexture(cv);
+ const PW=38,PH=PW*PLH/PLW;
+ const mesh=new THREE.Mesh(new THREE.PlaneGeometry(PW,PH),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthTest:false,side:THREE.DoubleSide}));
+ mesh.renderOrder=997;
+ const y=PL.yaw+PL_OFF,el=-.02,R=46;/* 開いたとき、道しるべを見ていた視線が札の選択肢に重ならない高さ */
+ mesh.position.set(Math.sin(y)*Math.cos(el)*R,Math.sin(el)*R,Math.cos(y)*Math.cos(el)*R);mesh.up.set(0,1,0);mesh.lookAt(0,0,0);
+ scene.add(mesh);PL.panel={mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,away:0};plDraw();
+ try{chime(-1,784);}catch(e){}}
+function plClose(){const P=PL.panel;if(!P)return;scene.remove(P.mesh);P.tx.dispose();P.mesh.material.dispose();P.mesh.geometry.dispose();PL.panel=null;
+ if(VR.hot&&String(VR.hot).indexOf('pl')===0){VR.hot=null;VR.ht=0;}}
+function plGo(i){
+ if(HLOCK()||DAWN_ON){PL.msg='いまは百年の物語のとちゅうです。最後まで見とどけよう。';PL.msgT=performance.now()+3500;plDraw();return;}
+ if(H.on)stopHundred();
+ plClose();
+ goPlace(i,()=>plTitle(PLACES[i].n));}
+/* 着いた場所の名前を、夜空の中に少しだけ浮かべる */
+function plTitle(t){if(PL.lab){scene.remove(PL.lab);PL.lab.material.map.dispose();PL.lab.material.dispose();}
+ const sp=label(t,'#f2ece0',5.5,0);camera.getWorldDirection(_vf);
+ const yy=Math.atan2(_vf.x,_vf.z);sp.position.set(Math.sin(yy)*40,9,Math.cos(yy)*40);sp.renderOrder=998;scene.add(sp);PL.lab=sp;PL.labT=0;}
+function plStep(dt,down){
+ const S=PL.sign;S.sp.visible=true;
+ camera.getWorldDirection(_vf);const cy=Math.atan2(_vf.x,_vf.z);
+ if(PL.yaw===null)PL.yaw=cy;
+ if(!PL.gaze&&!PL.panel){let d=cy-PL.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>.5)PL.yaw+=d*Math.min(1,dt*2);}
+ const y=PL.yaw+PL_OFF;S.sp.position.set(Math.sin(y)*Math.cos(PL_EL)*PL_R,Math.sin(PL_EL)*PL_R,Math.cos(y)*Math.cos(PL_EL)*PL_R);
+ S.sp.material.opacity=.82+.18*Math.sin(T*1.6);
+ /* 着いた場所の名前（ふわっと出て消える） */
+ if(PL.lab){PL.labT+=dt;const a=PL.labT<.6?PL.labT/.6:PL.labT<2.4?1:Math.max(0,1-(PL.labT-2.4)/.8);PL.lab.material.opacity=a*.95;
+  if(PL.labT>3.3){scene.remove(PL.lab);PL.lab.material.map.dispose();PL.lab.material.dispose();PL.lab=null;}}
+ if(down){PL.gaze=false;PL.t=0;plSignDraw(0);return false;}
+ /* 場所の札が開いているとき */
+ if(PL.panel){const hp=vrHitMesh(PL.panel.mesh,PLW,PLH);
+  if(hp){PL.panel.away=0;vrPress(hp,PL.hot,plDraw,dt);return true;}
+  PL.panel.away+=dt;if(PL.panel.away>2.2)plClose();}
+ /* 道しるべを見つめる */
+ _vs.copy(S.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
+ PL.gaze=a<.1;
+ if(PL.gaze&&!PL.panel){PL.t+=dt;plSignDraw(Math.min(1,PL.t/PL_HOLD));vrRing(0);VR.gaze=-1;VR.gt=0;
+  if(PL.t>=PL_HOLD){PL.t=0;plSignDraw(0);plOpen();}return true;}
+ PL.t=0;plSignDraw(0);return false;}
+function plHide(){plClose();PL.sign.sp.visible=false;PL.gaze=false;PL.t=0;
+ if(PL.lab){scene.remove(PL.lab);PL.lab=null;}}
 function vrStep(dt){
  bump();FOVT=null;
  camera.getWorldDirection(_vf);headStep();
@@ -3694,6 +3785,7 @@ function vrStep(dt){
  if(down){VR.exitT+=dt;if(VR.exitT>=VR_EXIT){vrExitMode();return;}}else VR.exitT=Math.max(0,VR.exitT-dt*2);
  drawExit(VR.exitT/VR_EXIT);
  /* 札の上のボタンを見つめる */
+ if(plStep(dt,down))return;
  if(down)fragHide();else if(fragStep(dt))return;
  const hp=down?null:vrPanelHit();
  if(hp){VR.away=0;vrPress(hp,VR.panel.hot,vrDrawPanel,dt);return;}
@@ -3731,11 +3823,11 @@ function vrEnter(){
  try{const p=rq&&rq.call(el,{navigationUI:'hide'});
   if(p&&p.then)p.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}).catch(()=>{});}catch(e){}
  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{VR.lock=l;}).catch(()=>{});}catch(e){}
- setFov(84);vrCheckRot();headReset();VR.hinted=false;FR.yaw=null;fragSync();
+ setFov(84);vrCheckRot();headReset();VR.hinted=false;FR.yaw=null;fragSync();PL.yaw=null;
  setTimeout(()=>{if(VR.on&&!gyroActive){$('vrmsg').textContent='この端末では傾きセンサーが使えないため、VRで見回すことができません。画面をタップしてもどってください。';$('vrmsg').classList.add('on');}},2600);}
 function vrExitMode(){
  if(!VR.on)return;VR.on=false;
- vrClosePanel();fragHide();vrRing(0);vrRet.visible=false;vrExit.visible=false;
+ vrClosePanel();fragHide();plHide();vrRing(0);vrRet.visible=false;vrExit.visible=false;
  document.body.classList.remove('vr');$('vrrot').classList.remove('on');$('vrmsg').classList.remove('on');
  try{const ex=document.exitFullscreen||document.webkitExitFullscreen;if(document.fullscreenElement||document.webkitFullscreenElement)ex.call(document);}catch(e){}
  try{if(VR.lock){VR.lock.release();VR.lock=null;}}catch(e){}
