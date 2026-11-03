@@ -538,7 +538,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 </div></div>
 
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
-<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>左下の道しるべを見つめると場所をかえられます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
+<div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>足もとの小さな星を見つめると場所をかえられます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
 <div id="fade"></div>
 <div id="plname"></div>
@@ -3685,26 +3685,26 @@ function headStep(){
  else if(kind==='shake'&&g.t==='row'){
   if(isFav(g.fo)){vrFav(g.fo);headHint('首ふり（2往復）：素敵を外しました',true);}}
  else if(kind==='shake'&&g.t==='frag'){const i=FR.list.findIndex(f=>f.k===g.k);if(i>=0)fragRemove(i);}}
-/* ── 場所の道しるべ：足もと（左前）の光る道しるべを見つめると、場所をえらぶ札が開く ── */
+/* ── 場所の星：真下の「VRをおわる」のそばの小さな星を見つめると、場所をえらぶ札が開く ── */
 const PL={yaw:null,t:0,gaze:false,panel:null,hot:[],msg:'',msgT:0,lab:null,labT:0};
-const PL_HOLD=1.5,PL_PICK=1.2,PL_EL=-.56,PL_R=30,PL_OFF=-.78;
+/* 真下の「VRをおわる」のそば（約53°下）。ふだんの視界には入らない */
+const PL_HOLD=1.5,PL_PICK=1.2,PL_EL=-.93,PL_R=30,PL_OFF=0;
 const PLW=1024,PLH=1120;
-PL.sign=(function(){const cv=document.createElement('canvas');cv.width=cv.height=256;const tx=new THREE.CanvasTexture(cv);
- const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
- sp.scale.setScalar(4.6);sp.renderOrder=995;sp.visible=false;scene.add(sp);return {cv:cv,g:cv.getContext('2d'),tx:tx,sp:sp,q:-1};})();
-function plSignDraw(k,near){const S=PL.sign,q=Math.round(k*24)+(near?100:0);if(q===S.q)return;S.q=q;k=Math.round(k*24)/24;
- const g=S.g,c=128;g.clearRect(0,0,256,256);
- const r=g.createRadialGradient(c,c-10,0,c,c-10,110);r.addColorStop(0,'rgba(255,236,180,'+(near?.4:.16)+')');r.addColorStop(.6,'rgba(232,200,106,'+(near?.1:.03)+')');r.addColorStop(1,'rgba(232,200,106,0)');
- g.fillStyle=r;g.fillRect(0,0,256,256);
- /* 方位のしるし */
- g.fillStyle='rgba(12,17,32,.7)';g.beginPath();g.arc(c,c-14,62,0,7);g.fill();
- g.strokeStyle='rgba(232,200,106,'+(near?.9:.45)+')';g.lineWidth=4;g.beginPath();g.arc(c,c-14,62,0,7);g.stroke();
- g.fillStyle=near?'#f3d98a':'rgba(243,217,138,.55)';g.beginPath();
- [[0,-46],[10,-10],[46,0],[10,10],[0,46],[-10,10],[-46,0],[-10,-10]].forEach((p,i)=>i?g.lineTo(c+p[0],c-14+p[1]):g.moveTo(c+p[0],c-14+p[1]));g.closePath();g.fill();
- if(k>0){g.strokeStyle='#ffe9a8';g.lineWidth=9;g.lineCap='round';g.beginPath();g.arc(c,c-14,76,-Math.PI/2,-Math.PI/2+k*Math.PI*2);g.stroke();}
- if(near){g.fillStyle='#f2ece0';g.font='700 36px '+VRF;g.textAlign='center';g.textBaseline='middle';
-  g.shadowColor='rgba(0,0,0,.9)';g.shadowBlur=8;g.fillText('場所をかえる',c,c+90);g.shadowBlur=0;}
- S.tx.needsUpdate=true;}
+/* 草の上に落ちた、小さな星のかけら（輪や文字はなし。見つめると少しずつ明るくなる） */
+PL.sign=(function(){
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR_TEX,color:0xfff1cf,transparent:true,depthTest:false,blending:THREE.AdditiveBlending,opacity:.55}));
+ sp.scale.setScalar(1.5);sp.renderOrder=995;sp.visible=false;scene.add(sp);
+ const cv=document.createElement('canvas');cv.width=512;cv.height=96;const g=cv.getContext('2d');
+ g.fillStyle='rgba(242,236,224,.9)';g.font='500 40px '+VRF;g.textAlign='center';g.textBaseline='middle';
+ g.shadowColor='rgba(0,0,0,.9)';g.shadowBlur=8;g.fillText('場所をかえる',256,48);
+ const tx=new THREE.CanvasTexture(cv);
+ const lb=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false,opacity:0}));
+ lb.scale.set(6,6*96/512,1);lb.renderOrder=995;lb.visible=false;scene.add(lb);
+ return {sp:sp,lb:lb};})();
+/* k：見つめた進みぐあい（0〜1）、near：視線が近いか */
+function plSignDraw(k,near){const S=PL.sign;
+ S.sp.scale.setScalar(1.5*(1+.9*k));S.sp.material.opacity=Math.min(1,(near?.75:.5)+.3*k)*(.92+.08*Math.sin(T*1.3));
+ S.lb.material.opacity=near?Math.min(.85,.35+.6*k):0;}
 function plDraw(){
  const P=PL.panel;if(!P)return;
  const g=P.g,W=PLW,H=PLH,pad=48;
@@ -3738,7 +3738,7 @@ function plOpen(){
  const PW=38,PH=PW*PLH/PLW;
  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(PW,PH),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthTest:false,side:THREE.DoubleSide}));
  mesh.renderOrder=997;
- const y=PL.yaw+PL_OFF,el=-.02,R=46;/* 開いたとき、道しるべを見ていた視線が札の選択肢に重ならない高さ */
+ const y=PL.yaw+PL_OFF,el=-.42,R=46;/* 足もとを見ていた視線のすぐ上に開く（選択肢には重ならない） */
  mesh.position.set(Math.sin(y)*Math.cos(el)*R,Math.sin(el)*R,Math.cos(y)*Math.cos(el)*R);mesh.up.set(0,1,0);mesh.lookAt(0,0,0);
  scene.add(mesh);PL.panel={mesh:mesh,cv:cv,g:cv.getContext('2d'),tx:tx,away:0};plDraw();
  try{chime(-1,784);}catch(e){}}
@@ -3758,9 +3758,9 @@ function plStep(dt,down){
  camera.getWorldDirection(_vf);const cy=Math.atan2(_vf.x,_vf.z);
  if(PL.yaw===null)PL.yaw=cy;
  /* 見ようとして顔を向けても逃げない：下を見ているときは動かさず、正面を見て大きく向きを変えたときだけ、ゆっくりついてくる */
- if(!PL.gaze&&!PL.panel&&_vf.y>-.3){let d=cy-PL.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>1.35)PL.yaw+=d*Math.min(1,dt*1.5);}
+ if(!PL.gaze&&!PL.panel&&_vf.y>-.3){let d=cy-PL.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>.7)PL.yaw+=d*Math.min(1,dt*1.5);}
  const y=PL.yaw+PL_OFF;S.sp.position.set(Math.sin(y)*Math.cos(PL_EL)*PL_R,Math.sin(PL_EL)*PL_R,Math.cos(y)*Math.cos(PL_EL)*PL_R);
- S.sp.material.opacity=1;
+ S.lb.visible=true;S.lb.position.copy(S.sp.position).multiplyScalar(.97).add(_vu.set(0,-2.2,0));
  /* 着いた場所の名前（ふわっと出て消える） */
  if(PL.lab){PL.labT+=dt;const a=PL.labT<.6?PL.labT/.6:PL.labT<2.4?1:Math.max(0,1-(PL.labT-2.4)/.8);PL.lab.material.opacity=a*.95;
   if(PL.labT>3.3){scene.remove(PL.lab);PL.lab.material.map.dispose();PL.lab.material.dispose();PL.lab=null;}}
@@ -3769,13 +3769,13 @@ function plStep(dt,down){
  if(PL.panel){const hp=vrHitMesh(PL.panel.mesh,PLW,PLH);
   if(hp){PL.panel.away=0;vrPress(hp,PL.hot,plDraw,dt);return true;}
   PL.panel.away+=dt;if(PL.panel.away>2.2)plClose();}
- /* 道しるべを見つめる */
+ /* 足もとの星を見つめる */
  _vs.copy(S.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
  PL.gaze=a<.1;const near=a<.25;
  if(PL.gaze&&!PL.panel){PL.t+=dt;plSignDraw(Math.min(1,PL.t/PL_HOLD),true);vrRing(0);VR.gaze=-1;VR.gt=0;
   if(PL.t>=PL_HOLD){PL.t=0;plSignDraw(0,true);plOpen();}return true;}
  PL.t=0;plSignDraw(0,near);return false;}
-function plHide(){plClose();PL.sign.sp.visible=false;PL.gaze=false;PL.t=0;
+function plHide(){plClose();PL.sign.sp.visible=false;PL.sign.lb.visible=false;PL.gaze=false;PL.t=0;
  if(PL.lab){scene.remove(PL.lab);PL.lab=null;}}
 function vrStep(dt){
  bump();FOVT=null;
