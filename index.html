@@ -3429,6 +3429,7 @@ function vrDrawPanel(){
   const top=y+k*rowH,fo={q:o.fld,name:o.name,txt:o.txt},on=isFav(fo);
   if(VR.rowGaze===k){g.fillStyle='rgba(232,200,106,.2)';rrect(g,pad-16,top-8,W-pad*2+32,rowH-24,18);g.fill();}
   g.fillStyle='#2b4a6f';g.font='600 32px '+VRF;g.fillText(o.fld==='q1'?'問一':'問二',pad,top+8);
+  {const nk=nickOf(o);if(nk){g.fillStyle='#7d7668';g.font='500 30px '+VRF;g.textAlign='right';g.fillText(nk,W-pad-214,top+10);g.textAlign='left';}}
   g.fillStyle='#26231f';g.font='500 46px '+VRF;
   const al=wrapJ(g,'「'+o.txt+'」',W-pad*2-210),ls=al.slice(0,3);
   if(al.length>3)ls[2]=ls[2].replace(/.$/,'…');
@@ -3465,12 +3466,15 @@ function vrDrawPanel(){
  g.textAlign='left';g.textBaseline='top';
  P.tx.needsUpdate=true;}
 /* 全文を、行の場所いっぱいに広げて出す（文字が多いときは少し小さく） */
+/* ニックネーム（長いときは切る。なまえなしは出さない） */
+function nickOf(o){const n=String((o&&o.name)||'').trim();if(!n||n==='（なまえなし）')return '';const a=[...n];return a.length>10?a.slice(0,10).join('')+'…':n;}
 function vrDrawFull(o,top,h){
  const P=VR.panel,g=P.g,W=VRP.W,pad=VRP.pad,fo={q:o.fld,name:o.name,txt:o.txt},on=isFav(fo);
  g.fillStyle='#fffaf0';rrect(g,pad-20,top-10,W-pad*2+40,h,22);g.fill();
  g.strokeStyle='rgba(201,163,74,.8)';g.lineWidth=3;rrect(g,pad-20,top-10,W-pad*2+40,h,22);g.stroke();
  g.textAlign='left';g.textBaseline='top';
  g.fillStyle='#2b4a6f';g.font='600 32px '+VRF;g.fillText((o.fld==='q1'?'問一':'問二')+'　全文',pad,top+8);
+ {const nk=nickOf(o);if(nk){g.fillStyle='#7d7668';g.font='500 30px '+VRF;g.textAlign='right';g.fillText(nk,W-pad-10,top+10);g.textAlign='left';}}
  const tw=W-pad*2-10,room=h-60-130;let fs=48,ls;
  for(;fs>=28;fs-=2){g.font='500 '+fs+'px '+VRF;ls=wrapJ(g,'「'+o.txt+'」',tw);if(ls.length*fs*1.3<=room)break;}
  g.fillStyle='#26231f';ls.forEach((l,m)=>g.fillText(l,pad,top+56+m*fs*1.3));
@@ -3555,6 +3559,7 @@ function fragCap(f,k){const C=FR_CAP,g=C.g,W=1024,H=300;
  g.strokeStyle='rgba(232,200,106,.55)';g.lineWidth=3;rrect(g,2,2,W-4,H-4,28);g.stroke();
  const cnt={q1:0,q2:0};let tag='';FAV.forEach(o=>{cnt[o.q]++;if(favKey(o)===f.k)tag=(o.q==='q1'?'問一':'問二')+(cnt[o.q]===1?'①':'②');});
  g.textAlign='left';g.textBaseline='top';g.fillStyle='#f3d98a';g.font='700 36px '+VRF;g.fillText('★ '+tag,36,26);
+ {const nk=nickOf(f.o);if(nk){const tw=g.measureText('★ '+tag).width;g.fillStyle='#aab6cc';g.font='500 28px '+VRF;g.fillText(nk,36+tw+20,32);}}
  g.fillStyle='#f2ece0';g.font='500 44px '+VRF;
  const al=wrapJ(g,'「'+f.o.txt+'」',W-72),ls=al.slice(0,2);if(al.length>2)ls[1]=ls[1].replace(/.$/,'…');
  ls.forEach((l,m)=>g.fillText(l,36,84+m*56));
