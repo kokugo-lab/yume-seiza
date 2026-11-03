@@ -3691,19 +3691,19 @@ const PL_HOLD=1.5,PL_PICK=1.2,PL_EL=-.56,PL_R=30,PL_OFF=-.78;
 const PLW=1024,PLH=1120;
 PL.sign=(function(){const cv=document.createElement('canvas');cv.width=cv.height=256;const tx=new THREE.CanvasTexture(cv);
  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthTest:false}));
- sp.scale.setScalar(6.6);sp.renderOrder=995;sp.visible=false;scene.add(sp);return {cv:cv,g:cv.getContext('2d'),tx:tx,sp:sp,q:-1};})();
-function plSignDraw(k){const S=PL.sign,q=Math.round(k*24);if(q===S.q)return;S.q=q;
+ sp.scale.setScalar(4.6);sp.renderOrder=995;sp.visible=false;scene.add(sp);return {cv:cv,g:cv.getContext('2d'),tx:tx,sp:sp,q:-1};})();
+function plSignDraw(k,near){const S=PL.sign,q=Math.round(k*24)+(near?100:0);if(q===S.q)return;S.q=q;k=Math.round(k*24)/24;
  const g=S.g,c=128;g.clearRect(0,0,256,256);
- const r=g.createRadialGradient(c,c-10,0,c,c-10,110);r.addColorStop(0,'rgba(255,236,180,.55)');r.addColorStop(.6,'rgba(232,200,106,.12)');r.addColorStop(1,'rgba(232,200,106,0)');
+ const r=g.createRadialGradient(c,c-10,0,c,c-10,110);r.addColorStop(0,'rgba(255,236,180,'+(near?.4:.16)+')');r.addColorStop(.6,'rgba(232,200,106,'+(near?.1:.03)+')');r.addColorStop(1,'rgba(232,200,106,0)');
  g.fillStyle=r;g.fillRect(0,0,256,256);
  /* 方位のしるし */
  g.fillStyle='rgba(12,17,32,.7)';g.beginPath();g.arc(c,c-14,62,0,7);g.fill();
- g.strokeStyle='rgba(232,200,106,.9)';g.lineWidth=4;g.beginPath();g.arc(c,c-14,62,0,7);g.stroke();
- g.fillStyle='#f3d98a';g.beginPath();
+ g.strokeStyle='rgba(232,200,106,'+(near?.9:.45)+')';g.lineWidth=4;g.beginPath();g.arc(c,c-14,62,0,7);g.stroke();
+ g.fillStyle=near?'#f3d98a':'rgba(243,217,138,.55)';g.beginPath();
  [[0,-46],[10,-10],[46,0],[10,10],[0,46],[-10,10],[-46,0],[-10,-10]].forEach((p,i)=>i?g.lineTo(c+p[0],c-14+p[1]):g.moveTo(c+p[0],c-14+p[1]));g.closePath();g.fill();
- if(q>0){g.strokeStyle='#ffe9a8';g.lineWidth=9;g.lineCap='round';g.beginPath();g.arc(c,c-14,76,-Math.PI/2,-Math.PI/2+q/24*Math.PI*2);g.stroke();}
- g.fillStyle='#f2ece0';g.font='700 36px '+VRF;g.textAlign='center';g.textBaseline='middle';
- g.shadowColor='rgba(0,0,0,.9)';g.shadowBlur=8;g.fillText('場所をかえる',c,c+90);g.shadowBlur=0;
+ if(k>0){g.strokeStyle='#ffe9a8';g.lineWidth=9;g.lineCap='round';g.beginPath();g.arc(c,c-14,76,-Math.PI/2,-Math.PI/2+k*Math.PI*2);g.stroke();}
+ if(near){g.fillStyle='#f2ece0';g.font='700 36px '+VRF;g.textAlign='center';g.textBaseline='middle';
+  g.shadowColor='rgba(0,0,0,.9)';g.shadowBlur=8;g.fillText('場所をかえる',c,c+90);g.shadowBlur=0;}
  S.tx.needsUpdate=true;}
 function plDraw(){
  const P=PL.panel;if(!P)return;
@@ -3757,23 +3757,24 @@ function plStep(dt,down){
  const S=PL.sign;S.sp.visible=true;
  camera.getWorldDirection(_vf);const cy=Math.atan2(_vf.x,_vf.z);
  if(PL.yaw===null)PL.yaw=cy;
- if(!PL.gaze&&!PL.panel){let d=cy-PL.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>.5)PL.yaw+=d*Math.min(1,dt*2);}
+ /* 見ようとして顔を向けても逃げない：下を見ているときは動かさず、正面を見て大きく向きを変えたときだけ、ゆっくりついてくる */
+ if(!PL.gaze&&!PL.panel&&_vf.y>-.3){let d=cy-PL.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)>1.35)PL.yaw+=d*Math.min(1,dt*1.5);}
  const y=PL.yaw+PL_OFF;S.sp.position.set(Math.sin(y)*Math.cos(PL_EL)*PL_R,Math.sin(PL_EL)*PL_R,Math.cos(y)*Math.cos(PL_EL)*PL_R);
- S.sp.material.opacity=.82+.18*Math.sin(T*1.6);
+ S.sp.material.opacity=1;
  /* 着いた場所の名前（ふわっと出て消える） */
  if(PL.lab){PL.labT+=dt;const a=PL.labT<.6?PL.labT/.6:PL.labT<2.4?1:Math.max(0,1-(PL.labT-2.4)/.8);PL.lab.material.opacity=a*.95;
   if(PL.labT>3.3){scene.remove(PL.lab);PL.lab.material.map.dispose();PL.lab.material.dispose();PL.lab=null;}}
- if(down){PL.gaze=false;PL.t=0;plSignDraw(0);return false;}
+ if(down){PL.gaze=false;PL.t=0;plSignDraw(0,false);return false;}
  /* 場所の札が開いているとき */
  if(PL.panel){const hp=vrHitMesh(PL.panel.mesh,PLW,PLH);
   if(hp){PL.panel.away=0;vrPress(hp,PL.hot,plDraw,dt);return true;}
   PL.panel.away+=dt;if(PL.panel.away>2.2)plClose();}
  /* 道しるべを見つめる */
  _vs.copy(S.sp.position).normalize();const a=Math.acos(Math.max(-1,Math.min(1,_vs.dot(_vf))));
- PL.gaze=a<.1;
- if(PL.gaze&&!PL.panel){PL.t+=dt;plSignDraw(Math.min(1,PL.t/PL_HOLD));vrRing(0);VR.gaze=-1;VR.gt=0;
-  if(PL.t>=PL_HOLD){PL.t=0;plSignDraw(0);plOpen();}return true;}
- PL.t=0;plSignDraw(0);return false;}
+ PL.gaze=a<.1;const near=a<.25;
+ if(PL.gaze&&!PL.panel){PL.t+=dt;plSignDraw(Math.min(1,PL.t/PL_HOLD),true);vrRing(0);VR.gaze=-1;VR.gt=0;
+  if(PL.t>=PL_HOLD){PL.t=0;plSignDraw(0,true);plOpen();}return true;}
+ PL.t=0;plSignDraw(0,near);return false;}
 function plHide(){plClose();PL.sign.sp.visible=false;PL.gaze=false;PL.t=0;
  if(PL.lab){scene.remove(PL.lab);PL.lab=null;}}
 function vrStep(dt){
