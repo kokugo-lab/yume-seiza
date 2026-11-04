@@ -416,10 +416,10 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
   background:rgba(246,244,238,.97);color:#26231f;border-radius:10px;padding:16px;font-size:13px;line-height:1.9;pointer-events:none}
 </style>
 <style>
-/* ───── 読みの記録（先生用）・アンケート ───── */
-#dash,#sus{position:fixed;inset:0;z-index:20;background:#05070f;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
+/* ───── 読みの記録（先生用） ───── */
+#dash{position:fixed;inset:0;z-index:20;background:#05070f;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));color:#dfe6f5}
-#dash.on,#sus{display:block}
+#dash.on{display:block}
 #dash .w.wide{max-width:980px}
 #dash h3{color:#e8c86a;font-size:13.5px;letter-spacing:.14em;font-weight:500;margin:22px 0 8px}
 #dash .tb{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -431,11 +431,6 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 #dash .an .bar{display:block;height:6px;border-radius:99px;background:rgba(223,230,245,.12);overflow:hidden}
 #dash .an .bar i{display:block;height:100%;background:linear-gradient(90deg,#e8c86a,#ffb08a)}
 #dash .stu{position:fixed;inset:0;background:rgba(5,7,15,.98);overflow-y:auto;padding:16px;z-index:21}
-#sus .sq{background:rgba(246,244,238,.06);border-radius:10px;padding:10px 12px;margin:0 0 8px}
-#sus .sq p{margin:0 0 8px;font-size:13px;line-height:1.7}
-#sus .sr{display:flex;gap:6px}#sus .sr button{flex:1;border:1px solid rgba(223,230,245,.3);background:none;color:#dfe6f5;border-radius:8px;padding:8px 0;font:inherit;font-size:14px;cursor:pointer}
-#sus .sr button.on{background:#e8c86a;color:#241c08;border-color:#e8c86a;font-weight:600}
-#sus textarea{min-height:70px}
 </style>
 </head>
 <body>
@@ -4273,7 +4268,7 @@ document.addEventListener('fullscreenchange',()=>setTimeout(resize,200));
    ・記録先URL（Google Apps Script）があれば、数秒おきにまとめて送る（クラス全体を集計できる）
    記録するもの：入退室、VRの出入り、視線・頭の向きの推移、星を開いた／閉じた時間、回答ごとの注視時間、
    全文表示、素敵の選択と解除（どの方法で、選ぶまで何秒か）、ジェスチャー（成功・未完了）、ボタン、場所、
-   問一／問二、表示の切りかえ、道具、ミッション、タップ、音読、百年の物語、流れ星、星座づくり、投稿、アンケート。 */
+   問一／問二、表示の切りかえ、道具、ミッション、タップ、音読、百年の物語、流れ星、星座づくり、投稿。 */
 const LOGK={all:'yume_log_v1',q:'yume_logq_v1',url:'yume_logurl_v1',dev:'yume_dev_v1'};
 const LOG={sid:Math.random().toString(36).slice(2,10),dev:'',url:'',seq:0,via:'',selMs:null,
  trace:[],tAcc:0,tLast:0,fr:0,starW:null,starT:0,rowKey:null,rowT:0,rowFo:null,rowW:null,vrT:0,susDone:false,sending:false};
@@ -4373,8 +4368,7 @@ logWrap('vrOpen',null,(r,i)=>{const w=WORDS[i];if(w){LOG.vrStar=w.w;LOG.vrStarT=
 logWrap('vrClosePanel',()=>{logRow(null,null,null);if(LOG.vrStar){logEv('star_close',{w:LOG.vrStar,ms:Math.round(performance.now()-LOG.vrStarT)});LOG.vrStar=null;}});
 /* VRの出入り */
 logWrap('vrEnter',null,()=>{if(VR.on){LOG.vrT=performance.now();logEv('vr_enter',{w:innerWidth,h:innerHeight});}});
-logWrap('vrExitMode',()=>{if(VR.on){logRow(null,null,null);logEv('vr_exit',{ms:Math.round(performance.now()-LOG.vrT)});LOG._askSus=true;}},
- ()=>{if(LOG._askSus){LOG._askSus=false;if(!LOG.susDone)setTimeout(susOpen,900);}});
+logWrap('vrExitMode',()=>{if(VR.on){logRow(null,null,null);logEv('vr_exit',{ms:Math.round(performance.now()-LOG.vrT)});}});
 /* 場所・問・表示・道具・ミッションなど */
 logWrap('applyPlace',(i)=>{if(i!==PLACE||!LAND)logEv('place',{from:PLACE,to:i,name:PLACES[i]&&PLACES[i].n,via:LOG.pvia||'auto'});LOG.pvia='';});
 logWrap('plGo',()=>{LOG.pvia='vr-panel';});
@@ -4392,26 +4386,6 @@ logWrap('startTour',(a)=>logEv('tour',{auto:!!a}));
 logWrap('onTap',(x,y)=>{LOG.via='tap';logEv('tap',{x:+(x/innerWidth).toFixed(3),y:+(y/innerHeight).toFixed(3)});});
 $('dsave').addEventListener('click',()=>logEv('const_save_open',{n:(typeof DRAW!=='undefined'?DRAW.length:0)}));
 $('namerok').addEventListener('click',()=>logEv('const_named',{name:$('namerin').value||''}));
-
-/* ── 使いやすさのアンケート（SUS 日本語版・10問）：VRを出たあと一度だけ ── */
-const SUS_Q=['このシステムをしばしば使いたいと思う','このシステムは不必要なほど複雑だと感じた','このシステムは容易に使いこなすことができると思った',
- 'このシステムを使うのに技術の専門家のサポートを必要とするかもしれない','このシステムにあるさまざまな機能はよくまとまっていると感じた',
- 'このシステムでは、一貫性のないところが多くあったと感じた','たいていのユーザーは、このシステムの使用方法について、とても素早く学べるだろう',
- 'このシステムはとても扱いにくいと感じた','このシステムを使うのに自信があると感じた','このシステムを使い始める前に多くのことを学ぶ必要があった'];
-function susOpen(){
- if($('sus'))return;
- const d=document.createElement('div');d.id='sus';
- d.innerHTML='<div class="w"><h2 class="p">VRの使いやすさ（1分）</h2><p class="sub">あてはまるところを選んでください。<br>1＝まったくそう思わない　5＝とてもそう思う</p>'+
-  SUS_Q.map((q,i)=>'<div class="sq"><p>'+(i+1)+'．'+q+'</p><div class="sr">'+[1,2,3,4,5].map(v=>'<button data-q="'+i+'" data-v="'+v+'">'+v+'</button>').join('')+'</div></div>').join('')+
-  '<p class="sub" style="margin-top:14px">ひとこと（使いにくかったところ・よかったところ）</p><textarea id="susc" maxlength="300"></textarea>'+
-  '<button class="prim" id="susok">送る</button><div class="row"><button id="susno">こたえない</button></div></div>';
- document.body.appendChild(d);const A=new Array(10).fill(0);
- d.addEventListener('click',e=>{const b=e.target.closest('[data-q]');
-  if(b){const i=+b.dataset.q;A[i]=+b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));return;}
-  if(e.target.id==='susok'){if(A.some(v=>!v)){e.target.textContent='すべて選んでから送ってください';return;}
-   const sc=(A.reduce((s,v,i)=>s+(i%2===0?v-1:5-v),0))*2.5;
-   logEv('sus',{a:A,score:sc,comment:$('susc').value||''});LOG.susDone=true;d.remove();showNote('ありがとうございました。');}
-  if(e.target.id==='susno'){logEv('sus_skip',{});LOG.susDone=true;d.remove();}});}
 
 /* ══ 先生用：読みの記録（集計） ══ */
 function logLocal(){return lj(LOGK.all,[]);}
@@ -4472,9 +4446,9 @@ function dashRender(el,evs,src){
  el.innerHTML='<div class="w wide"><h2 class="p">読みの記録</h2>'+
   '<p class="sub">'+(src==='class'?'クラス全体（記録先から）':'この端末')+'　'+R.n+'件　生徒 '+stu.length+'人</p>'+
   '<div class="row"><button data-dash="local"'+(src==='local'?' class="y"':'')+'>この端末</button><button data-dash="class"'+(src==='class'?' class="y"':'')+'>クラス全体</button><button data-dash="heat">星空に重ねる</button></div>'+
-  '<h3>生徒ごと</h3><div class="tb"><table><tr><th>組</th><th>番号</th><th>名前</th><th>滞在</th><th>VR</th><th>開いた星</th><th>星を見た時間</th><th>回答の注視</th><th>素敵＋/−</th><th>10秒内の取り消し</th><th>ジェスチャー成功/未完了</th><th>全文</th><th>場所</th><th>SUS</th></tr>'+
+  '<h3>生徒ごと</h3><div class="tb"><table><tr><th>組</th><th>番号</th><th>名前</th><th>滞在</th><th>VR</th><th>開いた星</th><th>星を見た時間</th><th>回答の注視</th><th>素敵＋/−</th><th>10秒内の取り消し</th><th>ジェスチャー成功/未完了</th><th>全文</th><th>場所</th></tr>'+
   stu.map(s=>'<tr data-dash="stu" data-p="'+esc(s.pid)+'"><td>'+esc(s.cls)+'</td><td>'+esc(s.no)+'</td><td>'+esc(s.nick)+'</td><td>'+Math.round((s.t1-s.t0)/60000)+'分</td><td>'+sec(s.vrMs)+'</td><td>'+s.starOpen+
-   '</td><td>'+sec(s.starMs)+'</td><td>'+sec(s.dwellMs)+'</td><td>'+s.favAdd+'/'+s.favRemove+'</td><td>'+s.undo10+'</td><td>'+s.gestOk+'/'+s.gestPart+'</td><td>'+s.expand+'</td><td>'+s.places.size+'</td><td>'+(s.sus==null?'—':s.sus)+'</td></tr>').join('')+'</table></div>'+
+   '</td><td>'+sec(s.starMs)+'</td><td>'+sec(s.dwellMs)+'</td><td>'+s.favAdd+'/'+s.favRemove+'</td><td>'+s.undo10+'</td><td>'+s.gestOk+'/'+s.gestPart+'</td><td>'+s.expand+'</td><td>'+s.places.size+'</td></tr>').join('')+'</table></div>'+
   '<h3>よく見られた言葉（星を開いた時間＋回答の注視）</h3>'+words.map(w=>'<div class="rr"><span class="rw">'+esc(w.w)+'</span><span class="bar"><i style="width:'+((w.dwell+w.ms)/mx*100)+'%"></i></span><small>'+sec(w.dwell+w.ms)+'・'+w.who.size+'人</small></div>').join('')+
   '<h3>よく見つめられた回答</h3>'+ans.map(a=>'<div class="an"><span class="bar"><i class="t" style="width:'+(a.ms/ma*100)+'%"></i></span><p>'+esc(a.txt)+'</p><small>'+(a.fld==='q1'?'問一':'問二')+'・'+esc(nickOf(a)||'')+'　'+sec(a.ms)+'・'+a.who.size+'人が見た・素敵 '+a.fav+'</small></div>').join('')+
   '<h3>操作の方法ごと（設計の比較）</h3><div class="tb"><table><tr><th>方法</th><th>選んだ</th><th>外した</th><th>選ぶまで（中央値）</th><th>10秒内の取り消し</th></tr>'+
@@ -4493,8 +4467,8 @@ function dashStudent(pid){
  d.querySelector('.bk').onclick=()=>d.remove();$('dash').appendChild(d);}
 function dashCSV(sum){
  const R=LOG.dashR,evs=LOG.dashEv||[];let rows;
- if(sum)rows=[['組','番号','名前','ID','セッション数','滞在分','VR秒','VR回数','開いた星','星を見た秒','回答注視秒','注視件数','素敵追加','素敵解除','10秒内取消','ジェスチャー成功','ジェスチャー未完了','全文','場所の数','タップ','SUS']]
-  .concat(R.S.map(s=>[s.cls,s.no,s.nick,s.pid,s.sess.size,Math.round((s.t1-s.t0)/60000),Math.round(s.vrMs/1000),s.vrN,s.starOpen,Math.round(s.starMs/1000),Math.round(s.dwellMs/1000),s.dwellN,s.favAdd,s.favRemove,s.undo10,s.gestOk,s.gestPart,s.expand,s.places.size,s.taps,s.sus==null?'':s.sus]));
+ if(sum)rows=[['組','番号','名前','ID','セッション数','滞在分','VR秒','VR回数','開いた星','星を見た秒','回答注視秒','注視件数','素敵追加','素敵解除','10秒内取消','ジェスチャー成功','ジェスチャー未完了','全文','場所の数','タップ']]
+  .concat(R.S.map(s=>[s.cls,s.no,s.nick,s.pid,s.sess.size,Math.round((s.t1-s.t0)/60000),Math.round(s.vrMs/1000),s.vrN,s.starOpen,Math.round(s.starMs/1000),Math.round(s.dwellMs/1000),s.dwellN,s.favAdd,s.favRemove,s.undo10,s.gestOk,s.gestPart,s.expand,s.places.size,s.taps]));
  else rows=[['時刻','セッション','順','ID','組','番号','名前','画面','場所','問','種類','内容']].concat(evs.map(e=>[e.ts,e.sid,e.seq,e.pid,e.cls,e.no,e.nick,e.mode,e.place,e.q,e.type,JSON.stringify(e.d)]));
  const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=sum?'yume_students.csv':'yume_log.csv';a.click();}
