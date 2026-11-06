@@ -412,6 +412,11 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
   flex-direction:column;gap:14px;text-align:center;padding:24px;font-size:15px;letter-spacing:.14em;line-height:2;pointer-events:none}
 #vrrot .ic{font-size:44px;animation:vrR 1.8s ease-in-out infinite}
 @keyframes vrR{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+#vrback{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:15;display:none;
+  background:var(--kin);color:#241c08;border:0;border-radius:999px;padding:16px 34px;font-family:inherit;font-size:17px;letter-spacing:.18em;font-weight:600;
+  box-shadow:0 0 0 6px rgba(232,200,106,.25),0 8px 26px rgba(0,0,0,.55);cursor:pointer;animation:vbIn .5s ease}
+#vrback.on{display:block}body.vr #vrback{display:none!important}
+@keyframes vbIn{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translateX(-50%)}}
 #vrmsg.on{display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:42;width:min(440px,86vw);
   background:rgba(246,244,238,.97);color:#26231f;border-radius:10px;padding:16px;font-size:13px;line-height:1.9;pointer-events:none}
 </style>
@@ -558,6 +563,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
 <div id="vrcover" aria-label="タップでVRをおわる"></div>
 <div id="vrrot"><span class="ic">📱</span><span>スマホを横向きにして、<br>ゴーグルに入れてください。</span><span style="font-size:12px;color:#9fb0c8;letter-spacing:.08em">星や札のボタンは、まん中の点で見つめると押せます。<br>見つめた文で2回うなずくと☆素敵、首を2往復振ると外れます（ためし）。<br>長い文は、見つめつづけると全文が開きます。<br>足もとのまん丸の星の破片を見つめると、場所をかえられます。<br>足もとを見つめるか、画面をタップするとおわります。</span></div>
 <div id="vrmsg"></div>
+<button id="vrback">🥽 VRにもどる</button>
 <div id="fade"></div>
 <div id="plname"></div>
 <div id="intro"><div class="bar t"></div><div class="bar b"></div><div id="icap"></div><button id="iskip">スキップ ▶</button></div>
@@ -571,6 +577,7 @@ body.vr #vrcover::after{content:"";position:absolute;left:50%;top:0;bottom:0;wid
     よく使われた言葉ほど<b>大きく光り</b>、同じ文の中で一緒に使われた言葉どうしが<b>線で結ばれ</b>（多くの人が使うほど太く）、線をタップするとその文が読めます。<br>
     誰も使わなかった言葉は、ひとりで光る<b>孤星</b>になります。<br>
     端末を持ったまま体の向きを変えると、空を見回せます。</p>
+  <button class="go b" id="goVR" style="display:none">🥽 VRにもどる（さっきの続き）</button>
   <button class="go a" id="goSky">夜空を見上げる</button>
   <p class="hint">※ iPhone・iPad では、はじめに「センサーの使用」を許可してください。<br>
     傾きが使えない端末では、画面を指でなぞって見回せます。</p>
@@ -4246,6 +4253,7 @@ function vrEnter(){
   if(p&&p.then)p.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}).catch(()=>{});}catch(e){}
  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{VR.lock=l;}).catch(()=>{});}catch(e){}
  setFov(84);vrCheckRot();headReset();VR.hinted=false;FR.yaw=null;fragSync();PL.yaw=null;
+ $('vrback').classList.remove('on');vrSaveState();
  setTimeout(()=>{if(VR.on&&!gyroActive){$('vrmsg').textContent='この端末では傾きセンサーが使えないため、VRで見回すことができません。画面をタップしてもどってください。';$('vrmsg').classList.add('on');}},2600);}
 function vrExitMode(){
  if(!VR.on)return;VR.on=false;
@@ -4254,8 +4262,36 @@ function vrExitMode(){
  try{const ex=document.exitFullscreen||document.webkitExitFullscreen;if(document.fullscreenElement||document.webkitFullscreenElement)ex.call(document);}catch(e){}
  try{if(VR.lock){VR.lock.release();VR.lock=null;}}catch(e){}
  setFov(VR.fov0||72);resize();
+ vrSaveState(false);vrOfferBack();
  showNote('VRをおわりました。');}
 $('vrbtn').addEventListener('click',e=>{e.stopPropagation();vrEnter();});
+/* ── VRが途切れたときに、もどれるように ──
+   ・VRを出てしまった直後：画面のまん中下に「VRにもどる」を20秒出す（ゴーグルから出して一度タップ）
+   ・ページが読みこみ直された・ブラウザが閉じられた：30分以内なら、表紙に「VRにもどる（さっきの続き）」を出す
+     （そのときの問・場所・開いていた星も、もとどおりにする） */
+const VRST_K='yume_vrstate_v1';
+function vrSaveState(on){
+ const st={on:on!==false,t:Date.now(),q:QMODE,place:PLACE,w:(VR.cur>=0&&WORDS[VR.cur])?WORDS[VR.cur].w:''};
+ try{localStorage.setItem(VRST_K,JSON.stringify(st));}catch(e){}}
+setInterval(()=>{if(VR.on)vrSaveState(true);},4000);
+let VRBACK_T=null;
+function vrOfferBack(){const b=$('vrback');b.classList.add('on');clearTimeout(VRBACK_T);VRBACK_T=setTimeout(()=>b.classList.remove('on'),20000);}
+function vrResume(st){
+ try{if(typeof introEnd==='function'&&INTRO.on)introEnd();}catch(e){}
+ if(!inSky)enterSky();
+ if(st&&st.q&&st.q!==QMODE&&typeof setQMode==='function')setQMode(st.q);
+ vrEnter();
+ if(st&&typeof st.place==='number'&&st.place!==PLACE&&PLACES[st.place])applyPlace(st.place,true);
+ if(st&&st.w&&(st.w in INDEX)){const i=INDEX[st.w];setTimeout(()=>{if(VR.on&&stars[i]&&stars[i].sp.visible)vrOpen(i);},400);}
+ try{logEv('vr_resume',{via:st?'reload':'quick'});}catch(e){}}
+$('vrback').addEventListener('click',e=>{e.stopPropagation();$('vrback').classList.remove('on');vrResume(null);});
+(function(){let st=null;try{st=JSON.parse(localStorage.getItem(VRST_K)||'null');}catch(e){}
+ if(st&&st.on&&Date.now()-st.t<30*60*1000){const b=$('goVR');b.style.display='block';
+  b.addEventListener('click',e=>{e.stopPropagation();b.style.display='none';vrResume(st);});
+  $('goSky').addEventListener('click',()=>{b.style.display='none';});}})();
+/* 画面が消えて（スリープなど）もどってきたとき：VRのままなら、画面を消さない設定をかけ直す */
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&VR.on){
+ try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{VR.lock=l;}).catch(()=>{});}catch(e){}}});
 $('vrcover').addEventListener('click',e=>{e.stopPropagation();vrExitMode();});
 $('vrcover').addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();vrExitMode();},{passive:false});
 addEventListener('resize',vrCheckRot);
